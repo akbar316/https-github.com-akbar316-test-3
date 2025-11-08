@@ -1,3 +1,12 @@
+// FIX: Add TypeScript declaration for import.meta.env locally to resolve type errors
+declare interface ImportMetaEnv {
+  readonly VITE_OPENROUTER_API_KEY: string;
+}
+
+declare interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // This file provides a centralized function to call the OpenRouter API.
 // It abstracts away the API key management and SDK initialization.
 
