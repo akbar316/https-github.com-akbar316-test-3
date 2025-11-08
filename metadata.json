@@ -1,7 +1,9 @@
 {
   "name": "project(true)",
   "description": "A powerful suite of 80+ free online tools for text manipulation, data conversion, development, AI, PDF editing, and more. All tools are designed to be fast, secure, and accessible on any device.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "camera"
+  ],
   "schema": {
     "@context": "https://schema.org",
     "@type": "WebSite",

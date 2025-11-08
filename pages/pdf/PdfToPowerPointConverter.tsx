@@ -89,7 +89,7 @@ const PdfToPowerPointConverter: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro-1.5',
+                model: 'google/gemini-1.5-flash', // Changed model to google/gemini-1.5-flash
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 2000,
