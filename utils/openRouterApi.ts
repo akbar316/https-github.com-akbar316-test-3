@@ -1,11 +1,5 @@
-// FIX: Add TypeScript declaration for import.meta.env locally to resolve type errors
-declare interface ImportMetaEnv {
-  readonly VITE_OPENROUTER_API_KEY: string;
-}
-
-declare interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+// FIX: The global TypeScript declaration for import.meta.env is now in types.ts.
+// Removing the local declaration to avoid conflicts and ensure consistency.
 
 // This file provides a centralized function to call the OpenRouter API.
 // It abstracts away the API key management and SDK initialization.
@@ -82,9 +76,11 @@ export async function callOpenRouterApi(request: OpenRouterChatCompletionRequest
     });
 
     if (!response.ok) {
+      // FIX: Add type assertion to `string` for `errorData.message` as `OpenRouterMessage['content']` can be an array.
+      // This ensures `JSON.stringify` receives a string type if `errorData.message` somehow contains content parts.
       const errorData = await response.json();
       console.error("OpenRouter API error response:", errorData);
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorData.message || JSON.stringify(errorData)}`);
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorData.message as string || JSON.stringify(errorData)}`);
     }
 
     const data: OpenRouterChatCompletionResponse = await response.json();
