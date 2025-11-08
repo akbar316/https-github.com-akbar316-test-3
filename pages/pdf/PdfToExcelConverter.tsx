@@ -40,7 +40,7 @@ const PdfToExcelConverter: React.FC = () => {
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual table structures.</li>
             </ul>
             <p className="text-sm text-brand-text-secondary mt-4">
-                This tool provides a textual CSV representation of a PDF's tabular data. It does not generate an actual .xlsx file.
+                This tool provides a textual CSV representation of a PDF's tabular data. It does not generate an/an actual .xlsx file.
             </p>
         </>
     );
@@ -89,7 +89,7 @@ const PdfToExcelConverter: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-1.5-flash', // Changed model to google/gemini-1.5-flash
+                model: 'google/gemini-2.5-flash-image', // Changed model
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 2000,

@@ -89,7 +89,7 @@ const PdfOcr: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-1.5-flash', // Changed model to google/gemini-1.5-flash
+                model: 'google/gemini-2.5-flash-image', // Changed model
                 messages: messages,
                 temperature: 0.2, // Lower temperature for factual extraction
                 max_tokens: 3000,
