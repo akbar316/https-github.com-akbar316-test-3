@@ -58,7 +58,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 1200,
@@ -66,7 +66,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
             });
 
             // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content || '') as string;
+            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
             const parsedAnalysis: BacklinkAnalysis = JSON.parse(jsonString);
             setAnalysis(parsedAnalysis);
 
@@ -111,7 +111,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     return (
         <ToolPageLayout
             title="AI Backlink Checker"
-            description="Get an AI-powered analysis of a domain's backlink profile (conceptual research via OpenRouter)."
+            description="Scan a domain for broken or outdated links using AI analysis (conceptual scanning via OpenRouter)."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">
@@ -145,6 +145,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
                         <div className="bg-brand-bg p-4 rounded-md border border-brand-border space-y-3">
                             <p className="text-brand-text-primary">{analysis.overview}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* FIX: Defined InfoCard component for local use */}
                                 <InfoCard label="Total Backlinks" value={analysis.qualityMetrics.totalBacklinks} />
                                 <InfoCard label="Referring Domains" value={analysis.qualityMetrics.referringDomains} />
                                 <InfoCard label="Domain Authority" value={analysis.qualityMetrics.domainAuthority} />
@@ -177,10 +178,11 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     );
 };
 
-const InfoCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-    <div className="bg-brand-surface p-3 rounded-md">
+// FIX: Added InfoCard component definition for local use.
+const InfoCard: React.FC<{label: string, value: string}> = ({label, value}) => (
+    <div className="bg-brand-bg p-4 rounded-lg">
         <p className="text-sm text-brand-text-secondary">{label}</p>
-        <p className="font-semibold text-brand-text-primary">{value}</p>
+        <p className="font-semibold text-lg">{value}</p>
     </div>
 );
 

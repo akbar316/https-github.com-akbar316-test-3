@@ -32,13 +32,13 @@ const TextToImageGenerator: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.9,
                 max_tokens: 500,
             });
 
-            const generatedContent = response.choices?.[0]?.message?.content || '';
+            const generatedContent = (response.choices?.[0]?.message?.content as string) || '';
             setConceptText(generatedContent);
 
         } catch (err: any) {

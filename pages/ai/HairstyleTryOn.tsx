@@ -41,7 +41,7 @@ const HairstyleTryOn: React.FC = () => {
             const messages: OpenRouterMessage[] = [
                 {
                     role: 'system',
-                    content: 'You are an AI assistant that analyzes a person\'s image and a hairstyle prompt, then generates a detailed textual concept of how that person would look with the described hairstyle. Focus on hair length, cut, color, texture, and how it frames the face. Do not generate an actual image, only text.',
+                    content: 'You are an AI assistant that analyzes a person\'s image and a hairstyle prompt, then generates a detailed textual concept of how that person would look with the described hairstyle. Focus on hair length, cut, color, texture, and how it frames the face. Do not generate an/an image, only text.',
                 },
                 {
                     role: 'user',
@@ -53,13 +53,13 @@ const HairstyleTryOn: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 500,
             });
 
-            const generatedContent = response.choices?.[0]?.message?.content || '';
+            const generatedContent = (response.choices?.[0]?.message?.content as string) || '';
             setConceptText(generatedContent);
 
         } catch (err: any) {

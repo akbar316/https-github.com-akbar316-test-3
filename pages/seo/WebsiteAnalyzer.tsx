@@ -48,7 +48,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 1200,
@@ -56,7 +56,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
             });
 
             // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content || '') as string;
+            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
             const parsedReport: SeoReport = JSON.parse(jsonString);
             setReport(parsedReport);
 

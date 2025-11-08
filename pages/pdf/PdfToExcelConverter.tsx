@@ -89,13 +89,13 @@ const PdfToExcelConverter: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 2000,
             });
 
-            const responseText = response.choices?.[0]?.message?.content || '';
+            const responseText = (response.choices?.[0]?.message?.content as string) || '';
             setOutputText(responseText);
 
         } catch (e: any) {

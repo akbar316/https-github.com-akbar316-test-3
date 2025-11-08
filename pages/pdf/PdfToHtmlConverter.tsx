@@ -89,13 +89,13 @@ const PdfToHtmlConverter: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.6,
                 max_tokens: 3000,
             });
 
-            const responseText = response.choices?.[0]?.message?.content || '';
+            const responseText = (response.choices?.[0]?.message?.content as string) || '';
             setOutputHtml(responseText);
 
         } catch (e: any) {

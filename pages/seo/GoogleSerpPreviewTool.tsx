@@ -63,7 +63,7 @@ Focus Keyword: "${focusKeyword}"`,
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.8,
                 max_tokens: 1000,
@@ -71,7 +71,7 @@ Focus Keyword: "${focusKeyword}"`,
             });
 
             // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content || '') as string;
+            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
             const parsedOptimization: SerpOptimization = JSON.parse(jsonString);
             setOptimization(parsedOptimization);
 

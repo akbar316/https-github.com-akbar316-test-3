@@ -89,13 +89,13 @@ const PdfOcr: React.FC = () => {
             ];
 
             const response = await callOpenRouterApi({
-                model: 'google/gemini-pro',
+                model: 'google/gemini-pro-1.5',
                 messages: messages,
                 temperature: 0.2, // Lower temperature for factual extraction
                 max_tokens: 3000,
             });
 
-            const responseText = response.choices?.[0]?.message?.content || '';
+            const responseText = (response.choices?.[0]?.message?.content as string) || '';
             setOutputText(responseText);
 
         } catch (e: any) {

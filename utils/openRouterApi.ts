@@ -1,6 +1,17 @@
 // FIX: The global TypeScript declaration for import.meta.env is now in types.ts.
 // Removing the local declaration to avoid conflicts and ensure consistency.
 
+// FIX: Added local ImportMeta declaration to resolve type errors where global declaration from types.ts was not picked up.
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_OPENROUTER_API_KEY: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
 // This file provides a centralized function to call the OpenRouter API.
 // It abstracts away the API key management and SDK initialization.
 
