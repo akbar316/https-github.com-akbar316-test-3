@@ -101,10 +101,11 @@ const PdfPageExtractor: React.FC = () => {
             const existingPdfBytes = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(existingPdfBytes, { ignoreEncryption: true });
             
-            const newPdf = await PDFDocument.create();
             // FIX: Explicitly type map parameter to resolve arithmetic operation error.
-            const pagesToCopy = Array.from(selectedPages).map(p => p - 1); // 0-indexed
+            const pagesToCopy = Array.from(selectedPages).map((p: number) => p - 1); // 0-indexed
             const copiedPages = await newPdf.copyPages(pdfDoc, pagesToCopy);
+            
+            const newPdf = await PDFDocument.create();
             copiedPages.forEach(page => newPdf.addPage(page));
 
             const pdfBytes = await newPdf.save();

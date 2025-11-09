@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { tools } from '../utils/tools';
 import ToolCard from './ToolCard';
+import type { Tool } from '../types';
 
 interface ToolPageLayoutProps {
   title: string;
@@ -13,21 +13,31 @@ interface ToolPageLayoutProps {
 export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({ title, description, children, longDescription }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [relatedTools, setRelatedTools] = useState<Tool[]>([]);
 
-  const relatedTools = useMemo(() => {
-    const currentTool = tools.find(tool => tool.path === currentPath);
-    if (!currentTool) {
-      return [];
-    }
-    
-    const sameCategoryTools = tools.filter(
-      tool => tool.category === currentTool.category && tool.path !== currentPath
-    );
-    
-    // Shuffle and pick up to 4
-    const shuffled = sameCategoryTools.sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 4);
+  useEffect(() => {
+    let isMounted = true;
+    // Dynamically import tools to break circular dependency
+    import('../utils/tools').then(({ tools }) => {
+        if (!isMounted) return;
+
+        const currentTool = tools.find(tool => tool.path === currentPath);
+        if (!currentTool) {
+            setRelatedTools([]);
+            return;
+        }
+        
+        const sameCategoryTools = tools.filter(
+          tool => tool.category === currentTool.category && tool.path !== currentPath
+        );
+        
+        const shuffled = sameCategoryTools.sort(() => 0.5 - Math.random());
+        setRelatedTools(shuffled.slice(0, 4));
+    });
+
+    return () => { isMounted = false; };
   }, [currentPath]);
+
 
   return (
     <div className="space-y-8 animate-fade-in-up">
