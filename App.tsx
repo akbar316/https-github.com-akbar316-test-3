@@ -48,7 +48,7 @@ const ScrollToAnchor: React.FC = () => {
 };
 
 const aiToolPaths = new Set([
-  '/text-to-image-generator', '/ai-video-generator', '/ai-image-editor', '/ai-hairstyle-try-on',
+  '/text-to-image-generator', '/ai-image-editor', '/ai-hairstyle-try-on',
   '/pdf-to-word', '/pdf-to-excel', '/pdf-to-powerpoint', '/pdf-to-html', '/pdf-ocr', '/pdf-bookmark-adder',
   '/keyword-research-tool', '/backlink-checker', '/website-analyzer', '/broken-link-checker',
   '/domain-authority-checker', '/google-serp-preview'
