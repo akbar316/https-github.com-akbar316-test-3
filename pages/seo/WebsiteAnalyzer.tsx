@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface SeoReport {
     domain: string;
@@ -30,23 +29,22 @@ const WebsiteAnalyzer: React.FC = () => {
         setReport(null);
 
         try {
-            const systemPrompt = `You are an expert SEO website analysis assistant. Your task is to provide a conceptual SEO analysis for a given website domain. Generate an SEO score (e.g., "75/100 (Good)"), a brief summary of its conceptual SEO health, key findings (e.g., areas of strength or weakness), and actionable recommendations. Respond as only a valid JSON object. The structure should be:
-{
-  "domain": "example.com",
-  "seoScore": "e.g., 75/100 (Good)",
-  "summary": "A brief overview of the conceptual SEO performance.",
-  "keyFindings": ["finding 1", "finding 2"],
-  "recommendations": ["recommendation 1", "recommendation 2"]
-}
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time data. Do not include any text before or after the JSON object.`;
-
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual SEO analysis for the website: "${domain}" [/INST]`;
-
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-            const parsedReport: SeoReport = JSON.parse(cleanedJsonString);
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    domain: { type: Type.STRING },
+                    seoScore: { type: Type.STRING, description: "e.g., 75/100 (Good)" },
+                    summary: { type: Type.STRING },
+                    keyFindings: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["domain", "seoScore", "summary", "keyFindings", "recommendations"]
+            };
+            
+            const prompt = `You are an expert SEO website analysis assistant. Provide a conceptual SEO analysis for the website domain: "${domain}". Generate an SEO score (e.g., "75/100 (Good)"), a brief summary of its conceptual SEO health, key findings (e.g., areas of strength or weakness), and actionable recommendations. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data.`;
+            
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedReport: SeoReport = JSON.parse(jsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
@@ -60,7 +58,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Website SEO Analyzer, powered by Replicate, provides a conceptual SEO audit and optimization report for any website domain. This tool utilizes advanced AI to synthesize general SEO best practices and offer insights into a website's conceptual performance across various parameters like technical SEO, content quality, and user experience signals. It's an excellent resource for getting an AI-driven overview and actionable recommendations without requiring real-time crawling or extensive data collection.
+                Our AI Website SEO Analyzer, powered by the Gemini API, provides a conceptual SEO audit and optimization report for any website domain. This tool utilizes advanced AI to synthesize general SEO best practices and offer insights into a website's conceptual performance across various parameters like technical SEO, content quality, and user experience signals. It's an excellent resource for getting an AI-driven overview and actionable recommendations without requiring real-time crawling or extensive data collection.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes a conceptual SEO score, key findings highlighting areas of strength and weakness, and specific recommendations for improvement. This helps digital marketers and website owners to prioritize their SEO efforts more effectively.
@@ -81,7 +79,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     return (
         <ToolPageLayout
             title="AI Website SEO Analyzer"
-            description="Get an AI-powered SEO score and optimization report for your website (conceptual analysis via Replicate)."
+            description="Get an AI-powered SEO score and optimization report for your website (conceptual analysis via Gemini)."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">

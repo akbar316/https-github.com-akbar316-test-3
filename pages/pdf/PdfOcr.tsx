@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiVisionWithDataUrl } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,8 +19,6 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
-const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
-
 const PdfOcr: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -30,14 +28,14 @@ const PdfOcr: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our Advanced AI PDF OCR (Optical Character Recognition) tool leverages Replicate's powerful multimodal AI to accurately extract text from scanned PDF documents and images. Unlike basic OCR, this tool focuses on preserving the original layout, structure, and context of the text, making the extracted content much more usable and editable. It's ideal for converting image-based PDFs, scanned documents, or photographs of text into searchable and selectable text.
+                Our Advanced AI PDF OCR (Optical Character Recognition) tool leverages the Google Gemini API to accurately extract text from scanned PDF documents and images. Unlike basic OCR, this tool focuses on preserving the original layout, structure, and context of the text, making the extracted content much more usable and editable. It's ideal for converting image-based PDFs, scanned documents, or photographs of text into searchable and selectable text.
             </p>
             <p>
                 Whether you're digitizing old documents, extracting information from inaccessible files, or making scanned content editable, our AI-powered OCR provides a sophisticated solution.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Accuracy:</strong> Uses Replicate to recognize text with high precision, even on challenging scans.</li>
+                <li><strong>AI-Powered Accuracy:</strong> Uses Gemini to recognize text with high precision, even on challenging scans.</li>
                 <li><strong>Layout Preservation:</strong> Attempts to maintain headings, paragraphs, and columns in the extracted text for better readability.</li>
                 <li><strong>Multimodal Input:</strong> Processes PDF pages as images, allowing the AI to understand visual cues for layout and content.</li>
             </ul>
@@ -73,12 +71,7 @@ const PdfOcr: React.FC = () => {
             
             const prompt = `You are an AI assistant specialized in Optical Character Recognition (OCR). Your task is to accurately extract all readable text from the provided PDF page image. Preserve the original document's layout, including headings, paragraphs, lists, and columns, as much as possible in the textual output. If there are tables, extract their content in a readable, structured text format. Respond only with the extracted text content.`;
             
-            const output = await runReplicate(LLAVA_MODEL, {
-                image: imageUrl,
-                prompt: prompt,
-            });
-            
-            const responseText = Array.isArray(output) ? output.join('') : String(output);
+            const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -144,7 +137,7 @@ const PdfOcr: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF OCR (Text Recognition)"
-            description="Extract text from scanned PDFs using AI, with layout preservation via Replicate."
+            description="Extract text from scanned PDFs using AI, with layout preservation via Gemini."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

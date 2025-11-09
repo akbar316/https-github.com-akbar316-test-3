@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface BrokenLinkReport {
     domain: string;
@@ -29,28 +28,32 @@ const BrokenLinkChecker: React.FC = () => {
         setReport(null);
 
         try {
-            const systemPrompt = `You are an AI SEO assistant specialized in conceptual broken link checking. For a given domain, provide a summary of potential broken link issues, a list of *conceptual* broken links (e.g., common patterns or types of broken links that might occur on a site like this, not actual crawled URLs), their hypothetical reasons, and a priority level. Also, include recommendations for fixing and preventing them. Respond as only a valid JSON object. The structure should be:
-{
-  "domain": "example.com",
-  "summary": "A conceptual summary of potential broken link issues.",
-  "conceptualBrokenLinks": [
-    {
-      "url": "e.g., https://example.com/old-page",
-      "reason": "e.g., Page removed without redirect",
-      "priority": "High | Medium | Low"
-    }
-  ],
-  "recommendations": ["recommendation 1", "recommendation 2"]
-}
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time crawling. Do not include any text before or after the JSON object.`;
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    domain: { type: Type.STRING },
+                    summary: { type: Type.STRING },
+                    conceptualBrokenLinks: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                url: { type: Type.STRING },
+                                reason: { type: Type.STRING },
+                                priority: { type: Type.STRING },
+                            },
+                            required: ["url", "reason", "priority"]
+                        }
+                    },
+                    recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["domain", "summary", "conceptualBrokenLinks", "recommendations"]
+            };
 
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual broken link analysis for the domain: "${domain}" [/INST]`;
+            const prompt = `You are an AI SEO assistant specialized in conceptual broken link checking. For the domain "${domain}", provide a summary of potential broken link issues, a list of *conceptual* broken links (e.g., common patterns or types of broken links that might occur on a site like this, not actual crawled URLs), their hypothetical reasons, and a priority level. Also, include recommendations for fixing and preventing them. Remember this is a conceptual analysis based on general SEO knowledge, not real-time crawling.`;
 
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-            const parsedReport: BrokenLinkReport = JSON.parse(cleanedJsonString);
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedReport: BrokenLinkReport = JSON.parse(jsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
@@ -64,7 +67,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Broken Link Checker, powered by Replicate, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
+                Our AI Broken Link Checker, powered by the Gemini API, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes a summary of potential issues, a list of *hypothetical* broken links with reasons and priority levels, and actionable recommendations for prevention and repair. This helps website administrators and SEO specialists to be proactive in maintaining site health.

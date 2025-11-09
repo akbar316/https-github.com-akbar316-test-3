@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface DomainAuthorityReport {
     domain: string;
@@ -31,24 +30,23 @@ const DomainAuthorityChecker: React.FC = () => {
         setReport(null);
 
         try {
-            const systemPrompt = `You are an AI SEO assistant specialized in conceptual domain authority analysis. For a given domain, provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Respond as only a valid JSON object. The structure should be:
-{
-  "domain": "example.com",
-  "domainAuthority": "e.g., High (70-85)",
-  "pageAuthority": "e.g., Medium (50-65)",
-  "conceptualRating": "e.g., Strong",
-  "keyFactors": ["factor 1", "factor 2"],
-  "recommendations": ["recommendation 1", "recommendation 2"]
-}
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools. Do not include any text before or after the JSON object.`;
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    domain: { type: Type.STRING },
+                    domainAuthority: { type: Type.STRING, description: "e.g., High (70-85)" },
+                    pageAuthority: { type: Type.STRING, description: "e.g., Medium (50-65) for the homepage" },
+                    conceptualRating: { type: Type.STRING, description: "e.g., Strong, Moderate, Weak" },
+                    keyFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["domain", "domainAuthority", "pageAuthority", "conceptualRating", "keyFactors", "recommendations"]
+            };
             
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual domain authority analysis for the domain: "${domain}" [/INST]`;
+            const prompt = `You are an AI SEO assistant specialized in conceptual domain authority analysis. For the domain "${domain}", provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools.`;
 
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-            const parsedReport: DomainAuthorityReport = JSON.parse(cleanedJsonString);
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedReport: DomainAuthorityReport = JSON.parse(jsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
@@ -62,7 +60,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Domain Authority Checker, powered by Replicate, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
+                Our AI Domain Authority Checker, powered by the Gemini API, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes conceptual DA/PA ratings, an overall conceptual strength rating, key factors influencing this authority, and actionable recommendations for improvement. This helps SEO professionals and website owners to understand and strategize around improving their domain's standing.
@@ -83,7 +81,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     return (
         <ToolPageLayout
             title="AI Domain Authority Checker"
-            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via Replicate)."
+            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via Gemini)."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface SerpOptimization {
     title: string;
@@ -41,29 +40,28 @@ const GoogleSerpPreviewTool: React.FC = () => {
         setOptimization(null);
 
         try {
-            const systemPrompt = `You are an AI SEO expert specializing in Google SERP snippet optimization. Analyze the provided title, description, and focus keyword for a webpage. Provide actionable recommendations to improve click-through rate (CTR) and relevance, considering character limits and user psychology. Also, give a conceptual estimate of the CTR based on the snippet quality. Respond as only a valid JSON object. The structure should be:
-{
-  "title": "Optimized Title Suggestion",
-  "description": "Optimized Description Suggestion",
-  "focusKeyword": "Primary focus keyword",
-  "aiRecommendations": ["recommendation 1", "recommendation 2"],
-  "conceptualClickThroughRate": "e.g., Good (5-8%)"
-}
-Ensure the suggested title and description adhere to typical SERP display limits (e.g., ~60 chars for title, ~160 chars for description). Do not include any text before or after the JSON object.`;
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING, description: "An optimized title suggestion." },
+                    description: { type: Type.STRING, description: "An optimized description suggestion." },
+                    focusKeyword: { type: Type.STRING, description: "The original focus keyword provided." },
+                    aiRecommendations: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of actionable recommendations." },
+                    conceptualClickThroughRate: { type: Type.STRING, description: "A conceptual CTR estimate, e.g., Good (5-8%)" },
+                },
+                required: ["title", "description", "focusKeyword", "aiRecommendations", "conceptualClickThroughRate"]
+            };
 
-            const userPrompt = `Analyze the following SERP snippet and provide optimization recommendations:
-Title: "${title}"
-Description: "${description}"
-URL: "${url}"
-Focus Keyword: "${focusKeyword}"`;
+            const prompt = `You are an AI SEO expert specializing in Google SERP snippet optimization. Analyze the provided title, description, and focus keyword for a webpage. Provide an optimized title, an optimized description, actionable recommendations to improve click-through rate (CTR) and relevance, and give a conceptual estimate of the CTR.
             
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\n${userPrompt} [/INST]`;
-
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-            const parsedOptimization: SerpOptimization = JSON.parse(cleanedJsonString);
+            Analyze this snippet:
+            Title: "${title}"
+            Description: "${description}"
+            URL: "${url}"
+            Focus Keyword: "${focusKeyword}"`;
+            
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedOptimization: SerpOptimization = JSON.parse(jsonString);
             setOptimization(parsedOptimization);
 
         } catch (err: any) {
@@ -77,7 +75,7 @@ Focus Keyword: "${focusKeyword}"`;
     const longDescription = (
         <>
             <p>
-                Our AI Google SERP Preview & Optimizer, powered by Replicate, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
+                Our AI Google SERP Preview & Optimizer, powered by the Gemini API, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
             </p>
             <p>
                 Input your current meta title, description, and target keyword, and the AI will suggest enhancements, ensuring your snippet is enticing and relevant to searchers. This is an indispensable tool for SEO specialists, content marketers, and webmasters aiming to stand out in competitive search results.
@@ -94,7 +92,7 @@ Focus Keyword: "${focusKeyword}"`;
     return (
         <ToolPageLayout
             title="AI Google SERP Preview & Optimizer"
-            description="Preview your SERP snippet and get AI-powered recommendations to improve it via Replicate."
+            description="Preview your SERP snippet and get AI-powered recommendations to improve it via Gemini."
             longDescription={longDescription}
         >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

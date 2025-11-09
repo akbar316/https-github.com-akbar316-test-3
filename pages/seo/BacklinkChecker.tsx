@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface BacklinkAnalysis {
     domain: string;
@@ -35,28 +34,31 @@ const BacklinkChecker: React.FC = () => {
         setAnalysis(null);
 
         try {
-            const systemPrompt = `You are an expert SEO backlink analysis assistant. Your task is to provide a conceptual analysis of a given domain's backlink profile. Include an overview, conceptual quality metrics (total backlinks, referring domains, domain authority, spam score - use estimated ranges or qualitative descriptions), potential opportunities for improvement, and any conceptual risks. Respond as only a valid JSON object. The structure should be:
-{
-  "domain": "example.com",
-  "overview": "A brief summary of the conceptual backlink profile.",
-  "qualityMetrics": {
-    "totalBacklinks": "e.g., Estimated 10K-50K",
-    "referringDomains": "e.g., Estimated 1K-5K",
-    "domainAuthority": "e.g., High (70+)",
-    "spamScore": "e.g., Low (0-10%)"
-  },
-  "opportunities": ["opportunity 1", "opportunity 2"],
-  "potentialRisks": ["risk 1", "risk 2"]
-}
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time data. Do not include any text before or after the JSON object.`;
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    domain: { type: Type.STRING },
+                    overview: { type: Type.STRING },
+                    qualityMetrics: {
+                        type: Type.OBJECT,
+                        properties: {
+                            totalBacklinks: { type: Type.STRING },
+                            referringDomains: { type: Type.STRING },
+                            domainAuthority: { type: Type.STRING },
+                            spamScore: { type: Type.STRING },
+                        },
+                        required: ["totalBacklinks", "referringDomains", "domainAuthority", "spamScore"]
+                    },
+                    opportunities: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    potentialRisks: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["domain", "overview", "qualityMetrics", "opportunities", "potentialRisks"]
+            };
 
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual backlink analysis for the domain: "${domain}" [/INST]`;
-
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-            const parsedAnalysis: BacklinkAnalysis = JSON.parse(cleanedJsonString);
+            const prompt = `You are an expert SEO backlink analysis assistant. Provide a conceptual analysis of the backlink profile for the domain "${domain}". Include an overview, conceptual quality metrics (total backlinks, referring domains, domain authority, spam score - use estimated ranges or qualitative descriptions), potential opportunities for improvement, and any conceptual risks. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data.`;
+            
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedAnalysis: BacklinkAnalysis = JSON.parse(jsonString);
             setAnalysis(parsedAnalysis);
 
         } catch (err: any) {
@@ -70,7 +72,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Backlink Checker, powered by Replicate, provides a conceptual analysis of any domain's backlink profile. This tool uses advanced AI to synthesize general SEO knowledge and provide insights into potential backlink quality, quantity, and associated risks and opportunities. It's an excellent resource for getting an AI-driven overview of a website's authority and link-building landscape without requiring real-time data.
+                Our AI Backlink Checker, powered by the Gemini API, provides a conceptual analysis of any domain's backlink profile. This tool uses advanced AI to synthesize general SEO knowledge and provide insights into potential backlink quality, quantity, and associated risks and opportunities. It's an excellent resource for getting an AI-driven overview of a website's authority and link-building landscape without requiring real-time data.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report with qualitative metrics and actionable suggestions for improving or maintaining a healthy backlink profile. This helps SEO professionals and digital marketers to formulate strategies more effectively.
@@ -87,16 +89,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
             </p>
         </>
     );
-
-    const getPriorityColor = (priority: 'High' | 'Medium' | 'Low') => {
-        switch (priority) {
-            case 'High': return 'text-red-400';
-            case 'Medium': return 'text-yellow-400';
-            case 'Low': return 'text-green-400';
-            default: return 'text-brand-text-secondary';
-        }
-    };
-
+    
     return (
         <ToolPageLayout
             title="AI Backlink Checker"
@@ -134,7 +127,6 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
                         <div className="bg-brand-bg p-4 rounded-md border border-brand-border space-y-3">
                             <p className="text-brand-text-primary">{analysis.overview}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* FIX: Defined InfoCard component for local use */}
                                 <InfoCard label="Total Backlinks" value={analysis.qualityMetrics.totalBacklinks} />
                                 <InfoCard label="Referring Domains" value={analysis.qualityMetrics.referringDomains} />
                                 <InfoCard label="Domain Authority" value={analysis.qualityMetrics.domainAuthority} />
@@ -167,7 +159,6 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     );
 };
 
-// FIX: Added InfoCard component definition for local use.
 const InfoCard: React.FC<{label: string, value: string}> = ({label, value}) => (
     <div className="bg-brand-surface p-4 rounded-lg">
         <p className="text-sm text-brand-text-secondary">{label}</p>

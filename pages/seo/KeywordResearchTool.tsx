@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-
-const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
+import { Type } from '@google/genai';
 
 interface KeywordInsight {
     keyword: string;
@@ -31,27 +30,26 @@ const KeywordResearchTool: React.FC = () => {
         setInsights(null);
 
         try {
-            const systemPrompt = `You are an expert SEO keyword research assistant. Your task is to provide detailed insights for a given seed keyword, including search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide the output as only a valid JSON array, where each object represents a keyword insight. The structure should be:
-[
-  {
-    "keyword": "seed keyword or related query",
-    "searchIntent": "Informational | Navigational | Commercial | Transactional",
-    "difficulty": "Easy | Medium | Difficult | Very Difficult",
-    "searchVolume": "e.g., 1K-10K",
-    "cpc": "e.g., $0.50 - $1.50",
-    "relatedQueries": ["query 1", "query 2"]
-  }
-]
-Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict without real tools. Prioritize accuracy and relevance. Do not include any text before or after the JSON array.`;
+            const schema = {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  keyword: { type: Type.STRING, description: "The keyword being analyzed." },
+                  searchIntent: { type: Type.STRING, description: "Informational, Navigational, Commercial, or Transactional" },
+                  difficulty: { type: Type.STRING, description: "Easy, Medium, Difficult, or Very Difficult" },
+                  searchVolume: { type: Type.STRING, description: "Estimated monthly search volume range, e.g., 1K-10K" },
+                  cpc: { type: Type.STRING, description: "Estimated Cost Per Click range, e.g., $0.50 - $1.50" },
+                  relatedQueries: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of related long-tail keywords." },
+                },
+                required: ['keyword', 'searchIntent', 'difficulty', 'searchVolume', 'cpc', 'relatedQueries']
+              }
+            };
+            
+            const prompt = `You are an expert SEO keyword research assistant. Provide detailed insights for the seed keyword "${seedKeyword}". Include search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict.`;
 
-            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nGenerate keyword insights for the seed keyword: "${seedKeyword}" [/INST]`;
-
-            const output = await runReplicate(LLAMA_MODEL, { prompt });
-
-            const jsonString = Array.isArray(output) ? output.join('') : String(output);
-            // Clean the output to ensure it's valid JSON
-            const cleanedJsonString = jsonString.substring(jsonString.indexOf('['), jsonString.lastIndexOf(']') + 1);
-            const parsedInsights: KeywordInsight[] = JSON.parse(cleanedJsonString);
+            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const parsedInsights: KeywordInsight[] = JSON.parse(jsonString);
             setInsights(parsedInsights);
 
         } catch (err: any) {
@@ -65,10 +63,10 @@ Provide insights for the seed keyword and 2-3 highly relevant related queries. F
     const longDescription = (
         <>
             <p>
-                Our AI Keyword Research Tool, powered by Replicate, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
+                Our AI Keyword Research Tool, powered by the Gemini API, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
             </p>
             <p>
-                Simply input your primary keyword, and our AI will generate a structured JSON output with conceptual data that helps you understand market demand and competition. This facilitates more informed decisions for content creation and paid advertising campaigns.
+                Simply input your primary keyword, and our AI will generate structured data that helps you understand market demand and competition. This facilitates more informed decisions for content creation and paid advertising campaigns.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key AI-Driven Insights</h3>
             <ul className="list-disc list-inside space-y-2">
@@ -83,7 +81,7 @@ Provide insights for the seed keyword and 2-3 highly relevant related queries. F
     return (
         <ToolPageLayout
             title="AI Keyword Research Tool"
-            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via Replicate."
+            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via the Gemini API."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiVisionWithDataUrl } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,8 +19,6 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
-const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
-
 const PdfToExcelConverter: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -30,14 +28,14 @@ const PdfToExcelConverter: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF to Excel Converter utilizes Replicate's advanced multimodal AI to intelligently identify and extract tabular data from your PDF documents. This tool provides a structured CSV (Comma Separated Values) output, which can be easily imported into Microsoft Excel, Google Sheets, or any other spreadsheet software. It's designed to handle complex tables and convert them into a clean, editable spreadsheet format.
+                Our AI PDF to Excel Converter utilizes the Google Gemini API to intelligently identify and extract tabular data from your PDF documents. This tool provides a structured CSV (Comma Separated Values) output, which can be easily imported into Microsoft Excel, Google Sheets, or any other spreadsheet software. It's designed to handle complex tables and convert them into a clean, editable spreadsheet format.
             </p>
             <p>
                 This tool is invaluable for data analysts, researchers, and business professionals who frequently need to extract numerical data from reports, invoices, or financial statements locked within PDF files.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Table Extraction:</strong> Uses Replicate to accurately detect and extract tables from PDF pages.</li>
+                <li><strong>AI-Powered Table Extraction:</strong> Uses Gemini to accurately detect and extract tables from PDF pages.</li>
                 <li><strong>CSV Output:</strong> Provides the extracted data in a universally compatible CSV format, ready for spreadsheet applications.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual table structures.</li>
             </ul>
@@ -74,12 +72,7 @@ const PdfToExcelConverter: React.FC = () => {
 
             const prompt = `You are an AI assistant that extracts tabular data from PDFs and converts it into a CSV string. Identify all tables in the provided image and represent their content accurately in a comma-separated format. For multiple tables, provide each as a separate CSV block. Respond only with the CSV content. If no tables are found, respond with "No tables found."`;
 
-            const output = await runReplicate(LLAVA_MODEL, {
-                image: imageUrl,
-                prompt: prompt,
-            });
-
-            const responseText = Array.isArray(output) ? output.join('') : String(output);
+            const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -145,7 +138,7 @@ const PdfToExcelConverter: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF to Excel Converter"
-            description="Let AI extract tables from your PDF into a downloadable CSV file using Replicate."
+            description="Let AI extract tables from your PDF into a downloadable CSV file using the Gemini API."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

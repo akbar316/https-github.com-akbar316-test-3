@@ -2,9 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { ToolPageLayout } from '../../components/ToolPageLayout';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { fileToDataUrl } from '../../utils/imageUtils';
-import { runReplicate, fileToBase64 } from '../../utils/openRouterApi';
-
-const INSTRUCT_PIX2PIX_MODEL = 'timothybrooks/instruct-pix2pix:30c1f9b40aa267466479f9b4585261f07f914610d1579f17a44db50c3d274da7';
+import { editImageWithGemini } from '../../utils/openRouterApi';
 
 const ImageEditor: React.FC = () => {
     const [baseImageFile, setBaseImageFile] = useState<File | null>(null);
@@ -40,17 +38,8 @@ const ImageEditor: React.FC = () => {
         setEditedImageUrl(null);
     
         try {
-            const dataUrl = await fileToBase64(baseImageFile);
-            const output = await runReplicate(INSTRUCT_PIX2PIX_MODEL, {
-                image: dataUrl,
-                prompt: prompt,
-            });
-
-            if (output && Array.isArray(output) && output.length > 0) {
-                setEditedImageUrl(output[0]);
-            } else {
-                throw new Error('AI did not return a valid image.');
-            }
+            const outputBase64 = await editImageWithGemini(prompt, baseImageFile);
+            setEditedImageUrl(`data:image/png;base64,${outputBase64}`);
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'An error occurred while editing the image.');
@@ -62,7 +51,7 @@ const ImageEditor: React.FC = () => {
     return (
         <ToolPageLayout
             title="AI Image Editor"
-            description="Edit your images with simple text instructions using AI."
+            description="Edit your images with simple text instructions using the Gemini API."
         >
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <div className="lg:col-span-2 space-y-4">

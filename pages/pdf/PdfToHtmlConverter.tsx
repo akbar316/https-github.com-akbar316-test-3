@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiVisionWithDataUrl } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,8 +19,6 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
-const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
-
 const PdfToHtmlConverter: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -30,14 +28,14 @@ const PdfToHtmlConverter: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF to HTML Converter utilizes Replicate's multimodal AI to intelligently transform your PDF documents into structured HTML. This tool analyzes the visual and textual content of your PDF pages and generates an HTML string that attempts to preserve the layout, headings, paragraphs, and other elements, making it suitable for web display or further editing.
+                Our AI PDF to HTML Converter utilizes the Google Gemini API to intelligently transform your PDF documents into structured HTML. This tool analyzes the visual and textual content of your PDF pages and generates an HTML string that attempts to preserve the layout, headings, paragraphs, and other elements, making it suitable for web display or further editing.
             </p>
             <p>
                 By using AI to interpret the document, it aims to create more semantically correct and editable HTML than traditional converters.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Conversion:</strong> Uses Replicate to interpret PDF content and generate corresponding HTML.</li>
+                <li><strong>AI-Powered Conversion:</strong> Uses Gemini to interpret PDF content and generate corresponding HTML.</li>
                 <li><strong>Structured HTML Output:</strong> Aims to create clean HTML with appropriate tags for headings, paragraphs, and lists.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of layout and visual elements.</li>
             </ul>
@@ -73,12 +71,7 @@ const PdfToHtmlConverter: React.FC = () => {
 
             const prompt = `You are an AI assistant that converts PDF content and layout into structured HTML. Analyze the provided PDF page image and generate clean HTML with appropriate tags for headings, paragraphs, lists, and potentially simple tables. Focus on preserving the visual hierarchy and content flow. Respond only with the HTML string, including basic HTML, head, and body tags. Use inline styles for formatting.`;
             
-            const output = await runReplicate(LLAVA_MODEL, {
-                image: imageUrl,
-                prompt: prompt,
-            });
-
-            const responseText = Array.isArray(output) ? output.join('') : String(output);
+            const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputHtml(responseText);
 
         } catch (e: any) {
@@ -144,7 +137,7 @@ const PdfToHtmlConverter: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF to HTML Converter"
-            description="Use AI to convert your PDFs into structured HTML files using Replicate."
+            description="Use AI to convert your PDFs into structured HTML files using the Gemini API."
             onFilesSelected={f => { setFiles(f); setOutputHtml(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { runReplicate } from '../../utils/openRouterApi';
+import { runGeminiVisionWithDataUrl } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,8 +19,6 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
-const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
-
 const PdfToPowerPointConverter: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -30,14 +28,14 @@ const PdfToPowerPointConverter: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF to PowerPoint Converter leverages Replicate's advanced multimodal AI to analyze the content of your PDF and generate a structured textual outline suitable for a presentation. This tool helps you transform dense PDF documents into digestible presentation formats, identifying key topics, summarizing sections, and suggesting slide structures. It's an invaluable aid for students, educators, and business professionals who need to quickly create presentations from reports, research papers, or lengthy documents.
+                Our AI PDF to PowerPoint Converter leverages the Google Gemini API to analyze the content of your PDF and generate a structured textual outline suitable for a presentation. This tool helps you transform dense PDF documents into digestible presentation formats, identifying key topics, summarizing sections, and suggesting slide structures. It's an invaluable aid for students, educators, and business professionals who need to quickly create presentations from reports, research papers, or lengthy documents.
             </p>
             <p>
                 The AI focuses on extracting the core message and organizing it logically, providing you with a solid foundation to build your visual slides upon.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Content Structuring:</strong> Uses Replicate to analyze PDF content and suggest a presentation flow.</li>
+                <li><strong>AI-Powered Content Structuring:</strong> Uses Gemini to analyze PDF content and suggest a presentation flow.</li>
                 <li><strong>Textual Outline:</strong> Generates a text-based presentation outline, including potential slide titles and bullet points.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual layout and emphasis.</li>
             </ul>
@@ -73,12 +71,7 @@ const PdfToPowerPointConverter: React.FC = () => {
 
             const prompt = `You are an AI assistant specialized in converting PDF content into structured presentation outlines. Analyze the provided PDF page image and extract key topics, main points, and supporting details. Organize this into a logical presentation flow, suggesting slide titles and bullet points. Respond only with the presentation outline in a clear, text-based format.`;
             
-            const output = await runReplicate(LLAVA_MODEL, {
-                image: imageUrl,
-                prompt: prompt,
-            });
-
-            const responseText = Array.isArray(output) ? output.join('') : String(output);
+            const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -123,7 +116,7 @@ const PdfToPowerPointConverter: React.FC = () => {
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = `${fileName}.txt`; // Download as TXT for now
+                            a.download = `${fileName}.txt`;
                             document.body.appendChild(a);
                             a.click();
                             document.body.removeChild(a);
@@ -144,7 +137,7 @@ const PdfToPowerPointConverter: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF to PowerPoint Converter"
-            description="Let AI analyze PDF content and structure it for presentations using Replicate."
+            description="Let AI analyze PDF content and structure it for presentations using the Gemini API."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

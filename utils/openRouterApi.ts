@@ -1,119 +1,107 @@
-// The Replicate API token should be set as an environment variable in your deployment environment.
-// For Vite, it should be prefixed with `VITE_`.
-// e.g., VITE_REPLICATE_API_TOKEN=r8_...
-declare global {
-  interface ImportMeta {
-    readonly env: {
-      readonly VITE_REPLICATE_API_TOKEN: string;
-    };
-  }
-}
+import { GoogleGenAI, GenerateContentResponse, Modality, Type, GenerateContentParameters } from "@google/genai";
 
-const API_HOST = 'https://api.replicate.com';
-
-interface Prediction {
-    id: string;
-    model: string;
-    version: string;
-    input: object;
-    logs: string | null;
-    error: any | null;
-    status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
-    created_at: string;
-    started_at: string | null;
-    completed_at: string | null;
-    urls: {
-        get: string;
-        cancel: string;
-    };
-    output: any;
-}
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function getPrediction(predictionUrl: string): Promise<Prediction> {
-    if (!import.meta.env.VITE_REPLICATE_API_TOKEN) {
-        throw new Error("REPLICATE_API_TOKEN is not defined. Please ensure it is set with the 'VITE_' prefix in your environment variables.");
-    }
-    const response = await fetch(predictionUrl, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to get prediction: ${error.detail}`);
-    }
-    return response.json();
-}
+// The guidelines are strict to use process.env.API_KEY.
+// We assume the build environment makes this available to the client-side code.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
- * Runs a model on Replicate and waits for the result.
- * @param modelId The version ID of the Replicate model.
- * @param input The input object for the model.
- * @returns The output from the Replicate model.
+ * A helper function to convert a File object to a base64 encoded string for the Gemini API.
+ * @param file The file to convert.
+ * @returns A promise that resolves with an object suitable for the Gemini API.
  */
-export async function runReplicate(modelId: string, input: object): Promise<any> {
-    if (!import.meta.env.VITE_REPLICATE_API_TOKEN) {
-        throw new Error("REPLICATE_API_TOKEN is not defined. Please ensure it is set with the 'VITE_' prefix in your environment variables.");
-    }
-
-    const startResponse = await fetch(`${API_HOST}/v1/predictions`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            version: modelId,
-            input,
-        }),
-    });
-
-    if (!startResponse.ok) {
-        const error = await startResponse.json();
-        throw new Error(`Failed to create prediction: ${error.detail}`);
-    }
-
-    let prediction: Prediction = await startResponse.json();
-
-    while (
-        prediction.status !== 'succeeded' &&
-        prediction.status !== 'failed' &&
-        prediction.status !== 'canceled'
-    ) {
-        await sleep(2000); // Poll every 2 seconds
-        prediction = await getPrediction(prediction.urls.get);
-        if (prediction.error) {
-            throw new Error(`Prediction failed: ${prediction.error}`);
-        }
-    }
-
-    if (prediction.status === 'succeeded') {
-        return prediction.output;
-    } else {
-        throw new Error(`Prediction did not succeed. Status: ${prediction.status} - ${prediction.error || ''}`);
-    }
-}
-
-
-/**
- * Converts a File object to a base64 encoded data URL.
- * Used for multimodal content in Replicate API calls.
- */
-export async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+const fileToGenerativePart = async (file: File) => {
+  const base64EncodedDataPromise = new Promise<string>((resolve) => {
     const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Failed to read file as data URL."));
-      }
-    };
-    reader.onerror = (error) => reject(error);
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
     reader.readAsDataURL(file);
   });
-}
+  return {
+    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+  };
+};
+
+/**
+ * Runs a Gemini model for text-only prompts.
+ */
+export const runGemini = async (model: string, prompt: string): Promise<string> => {
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+    });
+    return response.text;
+};
+
+
+/**
+ * Runs a Gemini vision model with a data URL (e.g., from a canvas).
+ */
+export const runGeminiVisionWithDataUrl = async (prompt: string, dataUrl: string): Promise<string> => {
+    const mimeType = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
+    const base64Data = dataUrl.split(',')[1];
+    const imagePart = {
+        inlineData: { data: base64Data, mimeType },
+    };
+    const textPart = { text: prompt };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: { parts: [imagePart, textPart] },
+    });
+    return response.text;
+};
+
+
+/**
+ * Generates an image using Gemini.
+ */
+export const generateImageWithGemini = async (prompt: string): Promise<string> => {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: prompt }] },
+        config: {
+            responseModalities: [Modality.IMAGE],
+        },
+    });
+    for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return part.inlineData.data; // base64 encoded string
+        }
+    }
+    throw new Error("No image data found in Gemini response.");
+};
+
+
+/**
+ * Edits an image using Gemini.
+ */
+export const editImageWithGemini = async (prompt: string, file: File): Promise<string> => {
+     const imagePart = await fileToGenerativePart(file);
+     const textPart = { text: prompt };
+     const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [imagePart, textPart] },
+        config: {
+            responseModalities: [Modality.IMAGE],
+        },
+    });
+     for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return part.inlineData.data;
+        }
+    }
+    throw new Error("No edited image data found in Gemini response.");
+};
+
+/**
+ * Runs a Gemini model with a specified JSON schema for structured output.
+ */
+export const runGeminiWithSchema = async (model: string, prompt: string, schema: any): Promise<string> => {
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: schema
+        }
+    });
+    return response.text;
+};
