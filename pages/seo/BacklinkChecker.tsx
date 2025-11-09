@@ -59,7 +59,7 @@ const BacklinkChecker: React.FC = () => {
 
             const prompt = `You are an expert SEO backlink analysis assistant. Provide a conceptual analysis of the backlink profile for the domain "${domain}". Include an overview, conceptual quality metrics (total backlinks, referring domains, domain authority, spam score - use estimated ranges or qualitative descriptions), potential opportunities for improvement, and any conceptual risks. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data.`;
             
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
             const parsedAnalysis: BacklinkAnalysis = JSON.parse(jsonString);
             setAnalysis(parsedAnalysis);
 

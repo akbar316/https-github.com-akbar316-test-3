@@ -62,7 +62,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
             URL: "${url}"
             Focus Keyword: "${focusKeyword}"`;
             
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
             const parsedOptimization: SerpOptimization = JSON.parse(jsonString);
             setOptimization(parsedOptimization);
 

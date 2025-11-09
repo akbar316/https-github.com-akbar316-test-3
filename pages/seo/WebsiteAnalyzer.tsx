@@ -45,7 +45,7 @@ const WebsiteAnalyzer: React.FC = () => {
             
             const prompt = `You are an expert SEO website analysis assistant. Provide a conceptual SEO analysis for the website domain: "${domain}". Generate an SEO score (e.g., "75/100 (Good)"), a brief summary of its conceptual SEO health, key findings (e.g., areas of strength or weakness), and actionable recommendations. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data.`;
             
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
             const parsedReport: SeoReport = JSON.parse(jsonString);
             setReport(parsedReport);
 

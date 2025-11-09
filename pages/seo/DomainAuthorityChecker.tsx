@@ -47,7 +47,7 @@ const DomainAuthorityChecker: React.FC = () => {
             
             const prompt = `You are an AI SEO assistant specialized in conceptual domain authority analysis. For the domain "${domain}", provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools.`;
 
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
             const parsedReport: DomainAuthorityReport = JSON.parse(jsonString);
             setReport(parsedReport);
 

@@ -50,7 +50,7 @@ const KeywordResearchTool: React.FC = () => {
             
             const prompt = `You are an expert SEO keyword research assistant. Provide detailed insights for the seed keyword "${seedKeyword}". Include search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict.`;
 
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
             const parsedInsights: KeywordInsight[] = JSON.parse(jsonString);
             setInsights(parsedInsights);
 
