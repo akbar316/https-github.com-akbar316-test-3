@@ -19,7 +19,7 @@ const DomainAuthorityChecker: React.FC = () => {
     const [report, setReport] = useState<DomainAuthorityReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const runAnalysis = async () => {
         if (!domain.trim()) {
@@ -54,7 +54,7 @@ const DomainAuthorityChecker: React.FC = () => {
         } catch (err: any) {
             console.error('AI Domain Authority Checker Error:', err);
             const errorMessage = err.message || 'An AI error occurred during domain authority analysis.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -109,7 +109,7 @@ const DomainAuthorityChecker: React.FC = () => {
 
                 <button
                     onClick={runAnalysis}
-                    disabled={isLoading || !domain.trim()}
+                    disabled={isLoading || !domain.trim() || isApiKeyLoading || !apiKeySelected}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Analyzing authority..." /> : 'Analyze Domain Authority with AI'}

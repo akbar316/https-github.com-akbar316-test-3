@@ -9,7 +9,7 @@ const TextToImageGenerator: React.FC = () => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const generateImage = async () => {
         if (!prompt.trim()) {
@@ -26,7 +26,7 @@ const TextToImageGenerator: React.FC = () => {
         } catch (err: any) {
             console.error(err);
             const errorMessage = err.message || 'An error occurred while generating the image.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -56,8 +56,8 @@ const TextToImageGenerator: React.FC = () => {
                     </div>
                     <button
                         onClick={generateImage}
-                        disabled={isLoading}
-                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
+                        disabled={isLoading || isApiKeyLoading || !apiKeySelected}
+                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <AiLoadingSpinner message="Generating..." /> : 'Generate Image'}
                     </button>

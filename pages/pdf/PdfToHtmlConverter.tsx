@@ -25,7 +25,7 @@ const PdfToHtmlConverter: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [outputHtml, setOutputHtml] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const longDescription = (
         <>
@@ -79,7 +79,7 @@ const PdfToHtmlConverter: React.FC = () => {
         } catch (e: any) {
             console.error(e);
             const errorMessage = e.message || 'Failed to convert PDF to HTML using AI.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -93,7 +93,7 @@ const PdfToHtmlConverter: React.FC = () => {
     const ActionButton = (
         <button
             onClick={handleProcess}
-            disabled={files.length === 0 || isProcessing}
+            disabled={files.length === 0 || isProcessing || isApiKeyLoading || !apiKeySelected}
             className="w-full bg-brand-primary text-white px-6 py-3 rounded-md font-semibold text-lg hover:bg-brand-primary-hover transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
         >
             {isProcessing ? <AiLoadingSpinner message="Analyzing PDF..." /> : 'Convert with AI'}

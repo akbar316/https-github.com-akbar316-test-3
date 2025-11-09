@@ -12,7 +12,7 @@ const ImageEditor: React.FC = () => {
     const [editedImageUrl, setEditedImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -45,7 +45,7 @@ const ImageEditor: React.FC = () => {
         } catch (err: any) {
             console.error(err);
             const errorMessage = err.message || 'An error occurred while editing the image.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -77,8 +77,8 @@ const ImageEditor: React.FC = () => {
                     
                     <button
                         onClick={editImage}
-                        disabled={isLoading || !baseImageFile}
-                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
+                        disabled={isLoading || !baseImageFile || isApiKeyLoading || !apiKeySelected}
+                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <AiLoadingSpinner message="Applying edit..." /> : 'Apply Edit with AI'}
                     </button>

@@ -29,7 +29,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     const [optimization, setOptimization] = useState<SerpOptimization | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const generateRecommendations = async () => {
         if (!title.trim() || !description.trim() || !focusKeyword.trim()) {
@@ -69,7 +69,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
         } catch (err: any) {
             console.error('AI SERP Optimization Error:', err);
             const errorMessage = err.message || 'An AI error occurred during SERP optimization.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -129,7 +129,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
                     </div>
                     <button
                         onClick={generateRecommendations}
-                        disabled={isLoading || !title.trim() || !description.trim() || !focusKeyword.trim()}
+                        disabled={isLoading || !title.trim() || !description.trim() || !focusKeyword.trim() || isApiKeyLoading || !apiKeySelected}
                         className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                     >
                         {isLoading ? <AiLoadingSpinner message="Optimizing snippet..." /> : 'Get AI Recommendations'}
