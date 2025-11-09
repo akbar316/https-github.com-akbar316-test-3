@@ -70,7 +70,7 @@ const PdfToWordConverter: React.FC = () => {
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             const imageUrl = canvas.toDataURL('image/jpeg');
             
-            const prompt = `You are an AI assistant that accurately converts PDF content and layout into a structured, editable text format suitable for a Word document. Preserve headings, paragraphs, lists, and tabular data. Focus on readability and ease of editing. Respond only with the converted text content. Analyze the provided image of a PDF page and perform the conversion.`;
+            const prompt = `You are an AI assistant that accurately converts PDF content and layout into a structured, editable text format suitable for a Word document. Analyze the provided image of a single PDF page and perform the conversion. Preserve headings, paragraphs, lists, and tabular data. Focus on readability and ease of editing. Respond only with the converted text content.`;
 
             const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);

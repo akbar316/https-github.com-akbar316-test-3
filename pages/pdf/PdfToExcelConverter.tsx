@@ -70,7 +70,7 @@ const PdfToExcelConverter: React.FC = () => {
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             const imageUrl = canvas.toDataURL('image/jpeg');
 
-            const prompt = `You are an AI assistant that extracts tabular data from PDFs and converts it into a CSV string. Identify all tables in the provided image and represent their content accurately in a comma-separated format. For multiple tables, provide each as a separate CSV block. Respond only with the CSV content. If no tables are found, respond with "No tables found."`;
+            const prompt = `You are an AI assistant that extracts tabular data from a single PDF page and converts it into a CSV string. Identify all tables in the provided image of a single page and represent their content accurately in a comma-separated format. For multiple tables, provide each as a separate CSV block. Respond only with the CSV content. If no tables are found, respond with "No tables found."`;
 
             const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);

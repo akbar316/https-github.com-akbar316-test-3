@@ -69,7 +69,7 @@ const PdfToHtmlConverter: React.FC = () => {
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             const imageUrl = canvas.toDataURL('image/jpeg');
 
-            const prompt = `You are an AI assistant that converts PDF content and layout into structured HTML. Analyze the provided PDF page image and generate clean HTML with appropriate tags for headings, paragraphs, lists, and potentially simple tables. Focus on preserving the visual hierarchy and content flow. Respond only with the HTML string, including basic HTML, head, and body tags. Use inline styles for formatting.`;
+            const prompt = `You are an AI assistant that converts PDF content and layout into structured HTML. Analyze the provided image of a single PDF page and generate clean HTML with appropriate tags for headings, paragraphs, lists, and potentially simple tables. Focus on preserving the visual hierarchy and content flow. Respond only with the HTML string, including basic HTML, head, and body tags. Use inline styles for formatting.`;
             
             const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputHtml(responseText);

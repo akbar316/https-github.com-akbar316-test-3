@@ -69,7 +69,7 @@ const PdfToPowerPointConverter: React.FC = () => {
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             const imageUrl = canvas.toDataURL('image/jpeg');
 
-            const prompt = `You are an AI assistant specialized in converting PDF content into structured presentation outlines. Analyze the provided PDF page image and extract key topics, main points, and supporting details. Organize this into a logical presentation flow, suggesting slide titles and bullet points. Respond only with the presentation outline in a clear, text-based format.`;
+            const prompt = `You are an AI assistant specialized in converting PDF content into a structured presentation outline. Analyze the provided image of a single PDF page and extract key topics, main points, and supporting details. Organize this into a logical presentation flow, suggesting slide titles and bullet points. Respond only with the presentation outline in a clear, text-based format.`;
             
             const responseText = await runGeminiVisionWithDataUrl(prompt, imageUrl);
             setOutputText(responseText);

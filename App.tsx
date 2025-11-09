@@ -7,7 +7,6 @@ import { tools } from './utils/tools';
 import useLocalStorage from './hooks/useLocalStorage';
 import { isWebGLAvailable } from './utils/webgl';
 import useIsDesktop from './hooks/useIsDesktop';
-import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load the heavy 3D background
 const ThreeBackground = React.lazy(() => import('./components/ThreeBackground'));
@@ -117,11 +116,7 @@ const App: React.FC = () => {
                 <Route
                   key={tool.path}
                   path={tool.path}
-                  element={
-                    <ErrorBoundary>
-                      <tool.component />
-                    </ErrorBoundary>
-                  }
+                  element={<tool.component />}
                 />
               ))}
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />

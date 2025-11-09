@@ -41,7 +41,7 @@ export const runGeminiVisionWithDataUrl = async (prompt: string, dataUrl: string
     };
     const textPart = { text: prompt };
     const response: GenerateContentResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: { parts: [imagePart, textPart] },
     });
     return response.text;
