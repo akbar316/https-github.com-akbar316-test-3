@@ -15,7 +15,7 @@ const loadingMessages = [
 ];
 
 const VideoGenerator: React.FC = () => {
-    const { invalidateApiKey } = useApiKey();
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
     const [prompt, setPrompt] = useState('A neon hologram of a cat driving at top speed');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -132,7 +132,7 @@ const VideoGenerator: React.FC = () => {
         } catch (err: any) {
             console.error(err);
             let errorMessage = err.message || 'An unknown error occurred during video generation.';
-            if (errorMessage.includes("Requested entity was not found.")) {
+            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
                 setError("API Key not found or invalid. Please select a valid API key.");
                 invalidateApiKey();
             } else {
@@ -205,8 +205,8 @@ const VideoGenerator: React.FC = () => {
                     </div>
                     <button
                         onClick={generateVideo}
-                        disabled={isLoading}
-                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
+                        disabled={isLoading || isApiKeyLoading || !apiKeySelected}
+                        className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <AiLoadingSpinner message="Generating..." /> : 'Generate Video'}
                     </button>
