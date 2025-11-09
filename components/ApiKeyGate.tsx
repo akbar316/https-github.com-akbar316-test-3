@@ -2,7 +2,15 @@ import React from 'react';
 import { useApiKey } from '../context/ApiKeyContext';
 
 const ApiKeyGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { apiKeySelected, selectApiKey } = useApiKey();
+    const { apiKeySelected, isLoading, selectApiKey } = useApiKey();
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-primary"></div>
+            </div>
+        );
+    }
 
     if (!apiKeySelected) {
         return (
