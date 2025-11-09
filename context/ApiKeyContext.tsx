@@ -1,7 +1,7 @@
-import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import React, { createContext, useState, useCallback, useContext } from 'react';
 
 interface ApiKeyContextType {
-    apiKeySelected: boolean | null;
+    apiKeySelected: boolean;
     selectApiKey: () => Promise<void>;
     invalidateApiKey: () => void;
 }
@@ -9,42 +9,13 @@ interface ApiKeyContextType {
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
 
 export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [apiKeySelected, setApiKeySelected] = useState<boolean | null>(null);
+    // Start with an optimistic assumption that the API key is available.
+    // The gate will only appear if an API call fails and `invalidateApiKey` is called.
+    const [apiKeySelected, setApiKeySelected] = useState<boolean>(true);
 
-    const checkApiKey = useCallback(async () => {
-        try {
-            // The primary mechanism for API key availability is the process.env.API_KEY.
-            // If it's present and non-empty, we can proceed.
-            if (process.env.API_KEY) {
-                setApiKeySelected(true);
-                return;
-            }
-            
-            // For specific tools like Veo, a user selection flow is provided via aistudio.
-            // Fallback to checking this helper if the env var isn't available on initial load.
-            // @ts-ignore
-            if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-                // @ts-ignore
-                const hasKey = await window.aistudio.hasSelectedApiKey();
-                setApiKeySelected(hasKey);
-            } else {
-                // If neither mechanism provides a key, we must assume no key is selected.
-                setApiKeySelected(false);
-            }
-        } catch (e) {
-            console.error("Error checking for API key:", e);
-            setApiKeySelected(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        // Check for the key only on initial mount.
-        checkApiKey();
-    }, [checkApiKey]);
-    
     const invalidateApiKey = useCallback(() => {
-        // If an API call fails with an auth error, we invalidate the key.
-        // This will cause the ApiKeyGate to reappear, prompting the user to select a valid key.
+        // This is called by tools when an API request fails due to an API key issue.
+        // Setting this to false will trigger the ApiKeyGate to be displayed.
         setApiKeySelected(false);
     }, []);
 
@@ -52,12 +23,13 @@ export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
             // @ts-ignore
             await window.aistudio.openSelectKey();
-            // Assume success immediately to hide the gate and avoid UI flicker due to race conditions.
-            // The next API call will either succeed or fail (triggering invalidateApiKey if necessary).
+            // After the user selects a key, we assume it's valid and hide the gate.
+            // If the next API call fails, `invalidateApiKey` will be called again.
             setApiKeySelected(true);
         } catch (e) {
             console.error("Error opening API key selection:", e);
-            setApiKeySelected(false); // If opening the dialog fails, stay in the 'unselected' state.
+            // If the dialog fails to open, we remain in a state where the key is not selected.
+            setApiKeySelected(false);
         }
     };
     

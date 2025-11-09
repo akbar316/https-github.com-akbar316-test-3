@@ -1,18 +1,9 @@
 import React from 'react';
 import { useApiKey } from '../context/ApiKeyContext';
-import AiLoadingSpinner from './AiLoadingSpinner';
 
 const ApiKeyGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { apiKeySelected, selectApiKey } = useApiKey();
 
-    if (apiKeySelected === null) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[40vh] bg-brand-surface p-10 rounded-lg shadow-xl text-center">
-                <AiLoadingSpinner message="Verifying API Key..." />
-            </div>
-        );
-    }
-    
     if (!apiKeySelected) {
         return (
             <div className="text-center bg-brand-bg p-8 rounded-lg animate-fade-in-up">
