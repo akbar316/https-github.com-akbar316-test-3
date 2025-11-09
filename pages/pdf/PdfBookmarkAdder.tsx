@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, fileToImageUrlContent, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,6 +19,9 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
+const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
+
+
 const PdfBookmarkAdder: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -28,14 +31,14 @@ const PdfBookmarkAdder: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF Table of Contents Generator uses OpenRouter's advanced multimodal AI capabilities to analyze your PDF documents and automatically create a structured, text-based table of contents (TOC). This tool intelligently identifies headings, subheadings, and key sections within your document, then compiles them into a clear and organized list with corresponding page numbers. It's an invaluable asset for academic researchers, writers, and business professionals dealing with lengthy reports, e-books, or manuals.
+                Our AI PDF Table of Contents Generator uses Replicate's advanced multimodal AI to analyze your PDF documents and automatically create a structured, text-based table of contents (TOC). This tool intelligently identifies headings, subheadings, and key sections within your document, then compiles them into a clear and organized list with corresponding page numbers. It's an invaluable asset for academic researchers, writers, and business professionals dealing with lengthy reports, e-books, or manuals.
             </p>
             <p>
                 Instead of manually sifting through pages to build a TOC, simply upload your PDF, and our AI will do the heavy lifting, providing you with a ready-to-use outline that enhances navigation and readability.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Structure Detection:</strong> Uses OpenRouter to identify hierarchical headings and sections within your PDF.</li>
+                <li><strong>AI-Powered Structure Detection:</strong> Uses Replicate to identify hierarchical headings and sections within your PDF.</li>
                 <li><strong>Text-Based Output:</strong> Generates a clean, readable text version of the table of contents, suitable for copy-pasting.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual hierarchy and text size/style.</li>
             </ul>
@@ -59,43 +62,24 @@ const PdfBookmarkAdder: React.FC = () => {
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-            const images: { type: 'image_url', image_url: { url: string, detail?: 'low' | 'high' } }[] = [];
-            for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) { // Process first 5 pages as images for AI to get context
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.8 }); // Lower scale for quicker image generation
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const context = canvas.getContext('2d');
-                if (!context) throw new Error("Could not get canvas context");
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error("Could not get canvas context");
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imageUrl = canvas.toDataURL('image/jpeg');
+            
+            const prompt = `You are an AI assistant specialized in generating detailed table of contents from PDF documents. Analyze the provided image of a PDF page and identify all major headings and subheadings. Assume this is the first page and estimate page numbers. Structure the output as a clear, hierarchical list. Respond only with the generated table of contents text.`;
 
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                const imageUrl = canvas.toDataURL('image/jpeg');
-                images.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'low' } });
-            }
-
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: 'You are an AI assistant specialized in generating detailed table of contents from PDF documents. Analyze the provided PDF (via images) and identify all major headings and subheadings, along with their approximate page numbers. Structure the output as a clear, hierarchical list. Respond only with the generated table of contents text.',
-                },
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: 'Generate a text-based table of contents with page numbers for this PDF. Here are up to the first 5 pages as images to understand the document structure:' },
-                        ...images
-                    ],
-                },
-            ];
-
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.3,
-                max_tokens: 1500,
+            const output = await runReplicate(LLAVA_MODEL, {
+                image: imageUrl,
+                prompt: prompt,
             });
 
-            const responseText = (response.choices?.[0]?.message?.content as string) || '';
+            const responseText = Array.isArray(output) ? output.join('') : String(output);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -161,7 +145,7 @@ const PdfBookmarkAdder: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF Table of Contents Generator"
-            description="Automatically generate a text-based table of contents for your PDF using OpenRouter."
+            description="Automatically generate a text-based table of contents for your PDF using Replicate."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

@@ -1,110 +1,107 @@
-// FIX: The global TypeScript declaration for import.meta.env is now in types.ts.
-// Removing the local declaration to avoid conflicts and ensure consistency.
-
-// FIX: Added local ImportMeta declaration to resolve type errors where global declaration from types.ts was not picked up.
+// The Replicate API token should be set as an environment variable in your deployment environment.
+// For Vite, it should be prefixed with `VITE_`.
+// e.g., VITE_REPLICATE_API_TOKEN=r8_...
 declare global {
-  interface ImportMetaEnv {
-    readonly VITE_OPENROUTER_API_KEY: string;
-  }
-
   interface ImportMeta {
-    readonly env: ImportMetaEnv;
+    readonly env: {
+      readonly VITE_REPLICATE_API_TOKEN: string;
+    };
   }
 }
 
-// This file provides a centralized function to call the OpenRouter API.
-// It abstracts away the API key management and SDK initialization.
+const API_HOST = 'https://api.replicate.com';
 
-interface OpenRouterMessage {
-  role: 'user' | 'system' | 'assistant' | 'tool';
-  content: string | Array<{ type: 'text', text: string } | { type: 'image_url', image_url: { url: string } }>;
-  tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
-  tool_call_id?: string;
+interface Prediction {
+    id: string;
+    model: string;
+    version: string;
+    input: object;
+    logs: string | null;
+    error: any | null;
+    status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+    created_at: string;
+    started_at: string | null;
+    completed_at: string | null;
+    urls: {
+        get: string;
+        cancel: string;
+    };
+    output: any;
 }
 
-interface OpenRouterChatCompletionRequest {
-  model: string;
-  messages: OpenRouterMessage[];
-  temperature?: number;
-  max_tokens?: number;
-  top_p?: number;
-  response_format?: { type: "json_object" };
-  tools?: any[];
-  tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
-  seed?: number;
-  // Custom headers to pass to fetch, not to the API body
-  request_headers?: {
-    'HTTP-Referer'?: string;
-    'X-Title'?: string;
-  };
-}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-interface OpenRouterChatCompletionResponse {
-  id: string;
-  choices: Array<{
-    finish_reason: string;
-    index: number;
-    message: OpenRouterMessage;
-  }>;
-  created: number;
-  model: string;
-  object: string;
-  usage: {
-    completion_tokens: number;
-    prompt_tokens: number;
-    total_tokens: number;
-  };
+async function getPrediction(predictionUrl: string): Promise<Prediction> {
+    if (!import.meta.env.VITE_REPLICATE_API_TOKEN) {
+        throw new Error("REPLICATE_API_TOKEN is not defined. Please ensure it is set with the 'VITE_' prefix in your environment variables.");
+    }
+    const response = await fetch(predictionUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to get prediction: ${error.detail}`);
+    }
+    return response.json();
 }
 
 /**
- * Calls the OpenRouter Chat Completions API.
- *
- * @param {OpenRouterChatCompletionRequest} request - The request payload for the API call.
- * @returns {Promise<OpenRouterChatCompletionResponse>} The response from the OpenRouter API.
- * @throws {Error} If the API key is missing or the API call fails.
+ * Runs a model on Replicate and waits for the result.
+ * @param modelId The version ID of the Replicate model.
+ * @param input The input object for the model.
+ * @returns The output from the Replicate model.
  */
-export async function callOpenRouterApi(request: OpenRouterChatCompletionRequest): Promise<OpenRouterChatCompletionResponse> {
-  // Use import.meta.env for Vite client-side environment variables
-  if (!import.meta.env.VITE_OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY is not defined in environment variables. Please ensure it is set with the 'VITE_' prefix in your Vercel project settings.");
-  }
-
-  const defaultHeaders = {
-    'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-    'Content-Type': 'application/json',
-    'HTTP-Referer': request.request_headers?.['HTTP-Referer'] || 'https://dicetools.com', // Replace with your actual domain
-    'X-Title': request.request_headers?.['X-Title'] || 'DiceTools AI Integration',
-  };
-
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: defaultHeaders,
-      body: JSON.stringify({
-        ...request,
-        request_headers: undefined, // Ensure custom headers are not in the body
-      }),
-    });
-
-    if (!response.ok) {
-      // FIX: Add type assertion to `string` for `errorData.message` as `OpenRouterMessage['content']` can be an array.
-      // This ensures `JSON.stringify` receives a string type if `errorData.message` somehow contains content parts.
-      const errorData = await response.json();
-      console.error("OpenRouter API error response:", errorData);
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorData.message as string || JSON.stringify(errorData)}`);
+export async function runReplicate(modelId: string, input: object): Promise<any> {
+    if (!import.meta.env.VITE_REPLICATE_API_TOKEN) {
+        throw new Error("REPLICATE_API_TOKEN is not defined. Please ensure it is set with the 'VITE_' prefix in your environment variables.");
     }
 
-    const data: OpenRouterChatCompletionResponse = await response.json();
-    return data;
-  } catch (error: any) {
-    console.error("OpenRouter API call failed:", error);
-    throw new Error(`OpenRouter API error: ${error.message || 'Unknown error occurred.'}`);
-  }
+    const startResponse = await fetch(`${API_HOST}/v1/predictions`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            version: modelId,
+            input,
+        }),
+    });
+
+    if (!startResponse.ok) {
+        const error = await startResponse.json();
+        throw new Error(`Failed to create prediction: ${error.detail}`);
+    }
+
+    let prediction: Prediction = await startResponse.json();
+
+    while (
+        prediction.status !== 'succeeded' &&
+        prediction.status !== 'failed' &&
+        prediction.status !== 'canceled'
+    ) {
+        await sleep(2000); // Poll every 2 seconds
+        prediction = await getPrediction(prediction.urls.get);
+        if (prediction.error) {
+            throw new Error(`Prediction failed: ${prediction.error}`);
+        }
+    }
+
+    if (prediction.status === 'succeeded') {
+        return prediction.output;
+    } else {
+        throw new Error(`Prediction did not succeed. Status: ${prediction.status} - ${prediction.error || ''}`);
+    }
 }
+
 
 /**
  * Converts a File object to a base64 encoded data URL.
- * Used for multimodal content in OpenRouter API calls.
+ * Used for multimodal content in Replicate API calls.
  */
 export async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -120,14 +117,3 @@ export async function fileToBase64(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-
-/**
- * Converts a File object to an OpenRouter-compatible image_url content part.
- */
-export async function fileToImageUrlContent(file: File): Promise<{ type: 'image_url', image_url: { url: string, detail?: 'low' | 'high' } }> {
-  const base64Url = await fileToBase64(file);
-  return { type: 'image_url', image_url: { url: base64Url, detail: 'high' } };
-}
-
-// Re-export types for convenience
-export type { OpenRouterChatCompletionRequest, OpenRouterChatCompletionResponse, OpenRouterMessage };

@@ -16,6 +16,7 @@ interface PdfToolLayoutProps {
     allowMultiple?: boolean;
     onFilesSelected: (files: File[]) => void;
     selectedFiles: File[];
+    longDescription?: React.ReactNode;
 }
 
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -63,6 +64,7 @@ const PdfToolPlaceholder: React.FC<PdfToolLayoutProps> = ({
     allowMultiple = false,
     onFilesSelected,
     selectedFiles,
+    longDescription,
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -148,7 +150,7 @@ const PdfToolPlaceholder: React.FC<PdfToolLayoutProps> = ({
     };
     
     return (
-        <ToolPageLayout title={title} description={description}>
+        <ToolPageLayout title={title} description={description} longDescription={longDescription}>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 {/* Left Panel: Upload & Settings */}
                 <div className="lg:col-span-2 space-y-6">

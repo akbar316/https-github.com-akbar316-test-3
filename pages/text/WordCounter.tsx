@@ -19,7 +19,8 @@ const WordCounter: React.FC = () => {
     if (!trimmedText) {
       return { words: 0, characters: 0, sentences: 0, paragraphs: 0, readingTime: 0, speakingTime: 0, readability: 0 };
     }
-    const words = trimmedText.match(/\b\w+\b/g) || [];
+    // FIX: Explicitly type `words` as string[] to avoid `never[]` type inference.
+    const words: string[] = trimmedText.match(/\b\w+\b/g) || [];
     const wordCount = words.length;
     const characters = text.length;
     const sentences = trimmedText.match(/[^.!?]+[.!?]+/g)?.length || 1;

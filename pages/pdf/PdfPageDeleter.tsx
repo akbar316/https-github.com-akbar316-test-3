@@ -103,7 +103,7 @@ const PdfPageDeleter: React.FC = () => {
             
             const pagesToRemove = Array.from(selectedPages).sort((a: number, b: number) => b - a); // Sort descending to not mess up indices
             // FIX: Explicitly typed the 'pageNum' parameter in the forEach callback to resolve the arithmetic operation error.
-            pagesToRemove.forEach((pageNum: number) => pdfDoc.removePage(pageNum - 1));
+            pagesToRemove.forEach(pageNum => pdfDoc.removePage(pageNum - 1));
 
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });

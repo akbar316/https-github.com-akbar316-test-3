@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
+
+const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
 
 interface DomainAuthorityReport {
     domain: string;
@@ -29,10 +31,7 @@ const DomainAuthorityChecker: React.FC = () => {
         setReport(null);
 
         try {
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: `You are an AI SEO assistant specialized in conceptual domain authority analysis. For a given domain, provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Respond in a JSON object format. The structure should be:
+            const systemPrompt = `You are an AI SEO assistant specialized in conceptual domain authority analysis. For a given domain, provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Respond as only a valid JSON object. The structure should be:
 {
   "domain": "example.com",
   "domainAuthority": "e.g., High (70-85)",
@@ -41,30 +40,20 @@ const DomainAuthorityChecker: React.FC = () => {
   "keyFactors": ["factor 1", "factor 2"],
   "recommendations": ["recommendation 1", "recommendation 2"]
 }
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools.`,
-                },
-                {
-                    role: 'user',
-                    content: `Perform a conceptual domain authority analysis for the domain: "${domain}"`,
-                },
-            ];
+Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools. Do not include any text before or after the JSON object.`;
+            
+            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual domain authority analysis for the domain: "${domain}" [/INST]`;
 
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 1000,
-                response_format: { type: "json_object" },
-            });
+            const output = await runReplicate(LLAMA_MODEL, { prompt });
 
-            // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
-            const parsedReport: DomainAuthorityReport = JSON.parse(jsonString);
+            const jsonString = Array.isArray(output) ? output.join('') : String(output);
+            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
+            const parsedReport: DomainAuthorityReport = JSON.parse(cleanedJsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
             console.error('AI Domain Authority Checker Error:', err);
-            setError(err.message || 'An AI error occurred during domain authority analysis. Please try again or with a different domain.');
+            setError(err.message || 'An AI error occurred during domain authority analysis. The model may have returned an invalid format.');
         } finally {
             setIsLoading(false);
         }
@@ -73,7 +62,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Domain Authority Checker, powered by OpenRouter, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
+                Our AI Domain Authority Checker, powered by Replicate, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes conceptual DA/PA ratings, an overall conceptual strength rating, key factors influencing this authority, and actionable recommendations for improvement. This helps SEO professionals and website owners to understand and strategize around improving their domain's standing.
@@ -94,7 +83,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     return (
         <ToolPageLayout
             title="AI Domain Authority Checker"
-            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via OpenRouter)."
+            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via Replicate)."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">
@@ -131,7 +120,6 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
                                 <p className="text-4xl font-bold text-brand-primary">{report.conceptualRating}</p>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* FIX: Defined InfoCard component for local use */}
                                 <InfoCard label="Domain Authority (DA)" value={report.domainAuthority} />
                                 <InfoCard label="Page Authority (PA)" value={report.pageAuthority} />
                             </div>
@@ -162,9 +150,8 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     );
 };
 
-// FIX: Added InfoCard component definition for local use.
 const InfoCard: React.FC<{label: string, value: string}> = ({label, value}) => (
-    <div className="bg-brand-bg p-4 rounded-lg">
+    <div className="bg-brand-surface p-4 rounded-lg">
         <p className="text-sm text-brand-text-secondary">{label}</p>
         <p className="font-semibold text-lg">{value}</p>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, fileToImageUrlContent, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,6 +19,8 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
+const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
+
 const PdfToExcelConverter: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -28,19 +30,19 @@ const PdfToExcelConverter: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF to Excel Converter utilizes OpenRouter's advanced multimodal AI capabilities to intelligently identify and extract tabular data from your PDF documents. Instead of a direct file conversion, this tool provides a structured CSV (Comma Separated Values) output, which can be easily imported into Microsoft Excel, Google Sheets, or any other spreadsheet software. It's designed to handle complex tables, even those with irregular formatting, and convert them into a clean, editable spreadsheet format.
+                Our AI PDF to Excel Converter utilizes Replicate's advanced multimodal AI to intelligently identify and extract tabular data from your PDF documents. This tool provides a structured CSV (Comma Separated Values) output, which can be easily imported into Microsoft Excel, Google Sheets, or any other spreadsheet software. It's designed to handle complex tables and convert them into a clean, editable spreadsheet format.
             </p>
             <p>
                 This tool is invaluable for data analysts, researchers, and business professionals who frequently need to extract numerical data from reports, invoices, or financial statements locked within PDF files.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Table Extraction:</strong> Uses OpenRouter to accurately detect and extract tables from PDF pages.</li>
+                <li><strong>AI-Powered Table Extraction:</strong> Uses Replicate to accurately detect and extract tables from PDF pages.</li>
                 <li><strong>CSV Output:</strong> Provides the extracted data in a universally compatible CSV format, ready for spreadsheet applications.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual table structures.</li>
             </ul>
             <p className="text-sm text-brand-text-secondary mt-4">
-                This tool provides a textual CSV representation of a PDF's tabular data. It does not generate an/an actual .xlsx file.
+                This tool provides a textual CSV representation of a PDF's tabular data. It does not generate an actual .xlsx file.
             </p>
         </>
     );
@@ -58,44 +60,26 @@ const PdfToExcelConverter: React.FC = () => {
             const pdfjs = await loadPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+            
+            // Use the first page for analysis
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error("Could not get canvas context");
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imageUrl = canvas.toDataURL('image/jpeg');
 
-            const images: { type: 'image_url', image_url: { url: string, detail?: 'low' | 'high' } }[] = [];
-            for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) { // Process first 3 pages as images for AI
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.0 });
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const context = canvas.getContext('2d');
-                if (!context) throw new Error("Could not get canvas context");
+            const prompt = `You are an AI assistant that extracts tabular data from PDFs and converts it into a CSV string. Identify all tables in the provided image and represent their content accurately in a comma-separated format. For multiple tables, provide each as a separate CSV block. Respond only with the CSV content. If no tables are found, respond with "No tables found."`;
 
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                const imageUrl = canvas.toDataURL('image/jpeg');
-                images.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'low' } });
-            }
-
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: 'You are an AI assistant that extracts tabular data from PDFs and converts it into a CSV string. Identify all tables and represent their content accurately in a comma-separated format. For multiple tables, provide each as a separate CSV block. Respond only with the CSV content. If no tables are found, respond with "No tables found."',
-                },
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: 'Extract all tables from this PDF and provide the data in CSV format. Here are up to the first 3 pages as images:' },
-                        ...images
-                    ],
-                },
-            ];
-
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 2000,
+            const output = await runReplicate(LLAVA_MODEL, {
+                image: imageUrl,
+                prompt: prompt,
             });
 
-            const responseText = (response.choices?.[0]?.message?.content as string) || '';
+            const responseText = Array.isArray(output) ? output.join('') : String(output);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -161,7 +145,7 @@ const PdfToExcelConverter: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF to Excel Converter"
-            description="Let AI extract tables from your PDF into a downloadable CSV file using OpenRouter."
+            description="Let AI extract tables from your PDF into a downloadable CSV file using Replicate."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

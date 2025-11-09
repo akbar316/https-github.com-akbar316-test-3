@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
+
+const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
 
 interface BrokenLinkReport {
     domain: string;
@@ -27,10 +29,7 @@ const BrokenLinkChecker: React.FC = () => {
         setReport(null);
 
         try {
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: `You are an AI SEO assistant specialized in conceptual broken link checking. For a given domain, provide a summary of potential broken link issues, a list of *conceptual* broken links (e.g., common patterns or types of broken links that might occur on a site like this, not actual crawled URLs), their hypothetical reasons, and a priority level. Also, include recommendations for fixing and preventing them. Respond in a JSON object format. The structure should be:
+            const systemPrompt = `You are an AI SEO assistant specialized in conceptual broken link checking. For a given domain, provide a summary of potential broken link issues, a list of *conceptual* broken links (e.g., common patterns or types of broken links that might occur on a site like this, not actual crawled URLs), their hypothetical reasons, and a priority level. Also, include recommendations for fixing and preventing them. Respond as only a valid JSON object. The structure should be:
 {
   "domain": "example.com",
   "summary": "A conceptual summary of potential broken link issues.",
@@ -43,30 +42,20 @@ const BrokenLinkChecker: React.FC = () => {
   ],
   "recommendations": ["recommendation 1", "recommendation 2"]
 }
-Remember this is a conceptual analysis based on general SEO knowledge, not real-time crawling.`,
-                },
-                {
-                    role: 'user',
-                    content: `Perform a conceptual broken link analysis for the domain: "${domain}"`,
-                },
-            ];
+Remember this is a conceptual analysis based on general SEO knowledge, not real-time crawling. Do not include any text before or after the JSON object.`;
 
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 1200,
-                response_format: { type: "json_object" },
-            });
+            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nPerform a conceptual broken link analysis for the domain: "${domain}" [/INST]`;
 
-            // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
-            const parsedReport: BrokenLinkReport = JSON.parse(jsonString);
+            const output = await runReplicate(LLAMA_MODEL, { prompt });
+
+            const jsonString = Array.isArray(output) ? output.join('') : String(output);
+            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
+            const parsedReport: BrokenLinkReport = JSON.parse(cleanedJsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
             console.error('AI Broken Link Checker Error:', err);
-            setError(err.message || 'An AI error occurred during broken link analysis. Please try again or with a different domain.');
+            setError(err.message || 'An AI error occurred during broken link analysis. The model may have returned an invalid format.');
         } finally {
             setIsLoading(false);
         }
@@ -75,7 +64,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     const longDescription = (
         <>
             <p>
-                Our AI Broken Link Checker, powered by OpenRouter, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
+                Our AI Broken Link Checker, powered by Replicate, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes a summary of potential issues, a list of *hypothetical* broken links with reasons and priority levels, and actionable recommendations for prevention and repair. This helps website administrators and SEO specialists to be proactive in maintaining site health.
@@ -104,7 +93,7 @@ Remember this is a conceptual analysis based on general SEO knowledge, not real-
     return (
         <ToolPageLayout
             title="AI Broken Link Checker"
-            description="Scan a domain for broken or outdated links using AI analysis (conceptual scanning via OpenRouter)."
+            description="Get a conceptual analysis of broken links for a domain using AI."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">

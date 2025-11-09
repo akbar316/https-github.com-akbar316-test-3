@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ToolPageLayout } from '../../components/ToolPageLayout';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { fileToDataUrl } from '../../utils/imageUtils';
@@ -6,14 +6,13 @@ import { runReplicate, fileToBase64 } from '../../utils/openRouterApi';
 
 const INSTRUCT_PIX2PIX_MODEL = 'timothybrooks/instruct-pix2pix:30c1f9b40aa267466479f9b4585261f07f914610d1579f17a44db50c3d274da7';
 
-const HairstyleTryOn: React.FC = () => {
+const ImageEditor: React.FC = () => {
     const [baseImageFile, setBaseImageFile] = useState<File | null>(null);
     const [baseImageUrl, setBaseImageUrl] = useState<string | null>(null);
-    const [prompt, setPrompt] = useState('long curly brown hair');
+    const [prompt, setPrompt] = useState('make the sky look like a sunset');
     const [editedImageUrl, setEditedImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [preset, setPreset] = useState('');
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -30,11 +29,10 @@ const HairstyleTryOn: React.FC = () => {
             }
         }
     };
-    
-    const applyHairstyle = async () => {
-        const finalPrompt = `Give this person ${preset || prompt}`;
-        if (!baseImageFile) {
-            setError('Please upload a photo.');
+
+    const editImage = async () => {
+        if (!baseImageFile || !prompt.trim()) {
+            setError('Please upload an image and provide an edit instruction.');
             return;
         }
         setIsLoading(true);
@@ -45,7 +43,7 @@ const HairstyleTryOn: React.FC = () => {
             const dataUrl = await fileToBase64(baseImageFile);
             const output = await runReplicate(INSTRUCT_PIX2PIX_MODEL, {
                 image: dataUrl,
-                prompt: finalPrompt,
+                prompt: prompt,
             });
 
             if (output && Array.isArray(output) && output.length > 0) {
@@ -55,65 +53,56 @@ const HairstyleTryOn: React.FC = () => {
             }
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'An error occurred while applying the hairstyle.');
+            setError(err.message || 'An error occurred while editing the image.');
         } finally {
             setIsLoading(false);
         }
     };
     
-    const presetStyles = ['Short Pixie Cut', 'Modern Bob', 'Long Wavy Hair', 'Braided Updo', 'Spiky Blue Hair'];
-
     return (
         <ToolPageLayout
-            title="AI Hairstyle Try-On"
-            description="Upload a photo and try on different hairstyles with AI."
+            title="AI Image Editor"
+            description="Edit your images with simple text instructions using AI."
         >
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                    <label className="block text-sm font-medium text-brand-text-secondary mb-1">1. Upload Your Photo</label>
+                    <label className="block text-sm font-medium text-brand-text-secondary mb-1">1. Upload Image</label>
                     <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"/>
                     
-                    <label className="block text-sm font-medium text-brand-text-secondary mb-1">2. Describe a Hairstyle</label>
+                    <label className="block text-sm font-medium text-brand-text-secondary mb-1">2. Describe Your Edit</label>
                     <textarea
                         value={prompt}
-                        onChange={(e) => { setPrompt(e.target.value); setPreset(''); }}
-                        rows={2}
-                        placeholder="e.g., long curly brown hair"
+                        onChange={(e) => setPrompt(e.target.value)}
+                        rows={4}
+                        placeholder="e.g., make the sky look like a sunset"
                         className="w-full p-2 bg-brand-bg border border-brand-border rounded-md"
                     />
-
-                    <p className="text-sm text-center text-brand-text-secondary">or try a preset style:</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                        {presetStyles.map(style => (
-                            <button key={style} onClick={() => { setPreset(style); setPrompt(style); }} className={`px-3 py-1 text-sm rounded-full ${preset === style ? 'bg-brand-primary text-white' : 'bg-brand-surface hover:bg-brand-border'}`}>{style}</button>
-                        ))}
-                    </div>
                     
                     <button
-                        onClick={applyHairstyle}
+                        onClick={editImage}
                         disabled={isLoading || !baseImageFile}
                         className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                     >
-                        {isLoading ? <AiLoadingSpinner message="Generating style..." /> : 'Generate Style'}
+                        {isLoading ? <AiLoadingSpinner message="Applying edit..." /> : 'Apply Edit with AI'}
                     </button>
                     {error && <p className="text-red-500 text-center">{error}</p>}
                 </div>
                 <div className="lg:col-span-3 bg-brand-bg p-4 rounded-lg min-h-[400px]">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                         <div className="flex flex-col items-center justify-center border border-dashed border-brand-border rounded-md p-2">
-                             {baseImageUrl ? <img src={baseImageUrl} alt="Original" className="max-w-full max-h-full object-contain rounded-md" /> : <p className="text-brand-text-secondary text-center">Your Photo</p>}
+                             {baseImageUrl ? <img src={baseImageUrl} alt="Original" className="max-w-full max-h-full object-contain rounded-md" /> : <p className="text-brand-text-secondary text-center">Original Image</p>}
                         </div>
                         <div className="flex flex-col items-center justify-center border border-dashed border-brand-border rounded-md p-2">
                              {isLoading ? (
-                                <AiLoadingSpinner message="Generating hairstyle..."/>
+                                <AiLoadingSpinner message="Generating image..."/>
                              ) : editedImageUrl ? (
                                 <div className="space-y-2 w-full text-center">
                                     <img src={editedImageUrl} alt="Edited" className="max-w-full max-h-full object-contain rounded-md" />
-                                    <a href={editedImageUrl} download="hairstyle_try_on.png" className="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
+                                    <a href={editedImageUrl} download="edited_image.png" className="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
                                         Download
                                     </a>
                                 </div>
-                             ) : <p className="text-brand-text-secondary text-center">Hairstyle Result</p>}
+                             ) : <p className="text-brand-text-secondary text-center">Edited Image</p>}
                         </div>
                     </div>
                 </div>
@@ -122,4 +111,4 @@ const HairstyleTryOn: React.FC = () => {
     );
 };
 
-export default HairstyleTryOn;
+export default ImageEditor;

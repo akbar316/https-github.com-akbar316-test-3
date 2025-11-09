@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, fileToImageUrlContent, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,6 +19,8 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
+const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
+
 const PdfToWordConverter: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -28,14 +30,14 @@ const PdfToWordConverter: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI PDF to Word Converter leverages OpenRouter's advanced multimodal AI capabilities to analyze your PDF documents and generate an editable text format, simulating a Word document. Instead of a direct file conversion, this tool provides a detailed textual output that captures the content and layout, making it easy to reconstruct or use in a word processor. It's ideal for extracting complex information, tables, or formatted text that traditional PDF to text converters might struggle with.
+                Our AI PDF to Word Converter leverages Replicate's advanced multimodal AI to analyze your PDF documents and generate an editable text format, simulating a Word document. Instead of a direct file conversion, this tool provides a detailed textual output that captures the content and layout, making it easy to reconstruct or use in a word processor. It's ideal for extracting complex information, tables, or formatted text that traditional PDF to text converters might struggle with.
             </p>
             <p>
                 By using AI, we aim to interpret the visual structure of your PDF, allowing you to get a comprehensive text representation that you can then easily adapt for Microsoft Word or other document editors.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Content Extraction:</strong> Uses OpenRouter to understand and convert PDF content into a structured text format.</li>
+                <li><strong>AI-Powered Content Extraction:</strong> Uses Replicate to understand and convert PDF content into a structured text format.</li>
                 <li><strong>Layout Preservation (Textual):</strong> Attempts to preserve the original layout in the textual output, indicating sections, headings, and lists.</li>
                 <li><strong>Multimodal Analysis:</strong> Converts PDF pages into images for AI processing, allowing for better interpretation of visual elements.</li>
             </ul>
@@ -59,43 +61,25 @@ const PdfToWordConverter: React.FC = () => {
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-            const images: { type: 'image_url', image_url: { url: string, detail?: 'low' | 'high' } }[] = [];
-            for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) { // Process first 3 pages as images for AI
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.0 });
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const context = canvas.getContext('2d');
-                if (!context) throw new Error("Could not get canvas context");
+            // Use the first page for analysis
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error("Could not get canvas context");
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imageUrl = canvas.toDataURL('image/jpeg');
+            
+            const prompt = `You are an AI assistant that accurately converts PDF content and layout into a structured, editable text format suitable for a Word document. Preserve headings, paragraphs, lists, and tabular data. Focus on readability and ease of editing. Respond only with the converted text content. Analyze the provided image of a PDF page and perform the conversion.`;
 
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                const imageUrl = canvas.toDataURL('image/jpeg');
-                images.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'low' } });
-            }
-
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: 'You are an AI assistant that accurately converts PDF content and layout into a structured, editable text format suitable for a Word document. Preserve headings, paragraphs, lists, and tabular data. Focus on readability and ease of editing. For multi-page documents, synthesize the content clearly. Respond only with the converted text content.',
-                },
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: 'Convert the content and layout of this PDF into an editable Word document format (textual representation). Here are up to the first 3 pages as images:' },
-                        ...images
-                    ],
-                },
-            ];
-
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 2000,
+            const output = await runReplicate(LLAVA_MODEL, {
+                image: imageUrl,
+                prompt: prompt,
             });
 
-            const responseText = (response.choices?.[0]?.message?.content as string) || '';
+            const responseText = Array.isArray(output) ? output.join('') : String(output);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -104,7 +88,6 @@ const PdfToWordConverter: React.FC = () => {
         } finally {
             setIsProcessing(false);
         }
-        
     };
 
     const ActionButton = (
@@ -162,7 +145,7 @@ const PdfToWordConverter: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF to Word Converter"
-            description="Let AI extract PDF content and layout into an editable format using OpenRouter."
+            description="Let AI extract PDF content and layout into an editable format using Replicate."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

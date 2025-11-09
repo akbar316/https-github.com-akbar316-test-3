@@ -12,12 +12,3 @@ export interface Tool {
   // FIX: Replaced JSX.Element with React.ReactNode to avoid namespace errors in type-only files.
   icon: React.ReactNode;
 }
-
-// FIX: Add TypeScript declaration for import.meta.env to resolve type errors
-interface ImportMetaEnv {
-  readonly VITE_OPENROUTER_API_KEY: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}

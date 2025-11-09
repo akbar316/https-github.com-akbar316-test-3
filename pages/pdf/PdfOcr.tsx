@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, fileToImageUrlContent, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 
 // --- DYNAMIC LIBRARY LOADING ---
@@ -19,6 +19,8 @@ const loadPdfJs = async () => {
 };
 // --- END DYNAMIC LIBRARY LOADING ---
 
+const LLAVA_MODEL = 'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a419804d7271391';
+
 const PdfOcr: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -28,14 +30,14 @@ const PdfOcr: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our Advanced AI PDF OCR (Optical Character Recognition) tool leverages OpenRouter's powerful multimodal AI to accurately extract text from scanned PDF documents and images. Unlike basic OCR, this tool focuses on preserving the original layout, structure, and context of the text, making the extracted content much more usable and editable. It's ideal for converting image-based PDFs, scanned documents, or photographs of text into searchable and selectable text.
+                Our Advanced AI PDF OCR (Optical Character Recognition) tool leverages Replicate's powerful multimodal AI to accurately extract text from scanned PDF documents and images. Unlike basic OCR, this tool focuses on preserving the original layout, structure, and context of the text, making the extracted content much more usable and editable. It's ideal for converting image-based PDFs, scanned documents, or photographs of text into searchable and selectable text.
             </p>
             <p>
                 Whether you're digitizing old documents, extracting information from inaccessible files, or making scanned content editable, our AI-powered OCR provides a sophisticated solution.
             </p>
             <h3 className="text-xl font-bold text-brand-text-primary mt-4 mb-2">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-                <li><strong>AI-Powered Accuracy:</strong> Uses OpenRouter to recognize text with high precision, even on challenging scans.</li>
+                <li><strong>AI-Powered Accuracy:</strong> Uses Replicate to recognize text with high precision, even on challenging scans.</li>
                 <li><strong>Layout Preservation:</strong> Attempts to maintain headings, paragraphs, and columns in the extracted text for better readability.</li>
                 <li><strong>Multimodal Input:</strong> Processes PDF pages as images, allowing the AI to understand visual cues for layout and content.</li>
             </ul>
@@ -59,43 +61,24 @@ const PdfOcr: React.FC = () => {
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-            const images: { type: 'image_url', image_url: { url: string, detail?: 'low' | 'high' } }[] = [];
-            for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) { // Process first 3 pages as images for AI
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.0 });
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const context = canvas.getContext('2d');
-                if (!context) throw new Error("Could not get canvas context");
-
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                const imageUrl = canvas.toDataURL('image/jpeg');
-                images.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'high' } });
-            }
-
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: 'You are an AI assistant specialized in Optical Character Recognition (OCR). Your task is to accurately extract all readable text from the provided PDF page images. Preserve the original document\'s layout, including headings, paragraphs, lists, and columns, as much as possible in the textual output. If there are tables, extract their content in a readable, structured text format. Respond only with the extracted text content.',
-                },
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: 'Perform OCR on this PDF and extract the text, preserving layout. Here are up to the first 3 pages as images:' },
-                        ...images
-                    ],
-                },
-            ];
-
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.2, // Lower temperature for factual extraction
-                max_tokens: 3000,
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error("Could not get canvas context");
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imageUrl = canvas.toDataURL('image/jpeg');
+            
+            const prompt = `You are an AI assistant specialized in Optical Character Recognition (OCR). Your task is to accurately extract all readable text from the provided PDF page image. Preserve the original document's layout, including headings, paragraphs, lists, and columns, as much as possible in the textual output. If there are tables, extract their content in a readable, structured text format. Respond only with the extracted text content.`;
+            
+            const output = await runReplicate(LLAVA_MODEL, {
+                image: imageUrl,
+                prompt: prompt,
             });
-
-            const responseText = (response.choices?.[0]?.message?.content as string) || '';
+            
+            const responseText = Array.isArray(output) ? output.join('') : String(output);
             setOutputText(responseText);
 
         } catch (e: any) {
@@ -161,7 +144,7 @@ const PdfOcr: React.FC = () => {
     return (
         <PdfToolLayout
             title="AI PDF OCR (Text Recognition)"
-            description="Extract text from scanned PDFs using AI, with layout preservation via OpenRouter."
+            description="Extract text from scanned PDFs using AI, with layout preservation via Replicate."
             onFilesSelected={f => { setFiles(f); setOutputText(null); setError(null); }}
             selectedFiles={files}
             actionButton={ActionButton}

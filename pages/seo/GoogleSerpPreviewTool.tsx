@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
+
+const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
 
 interface SerpOptimization {
     title: string;
@@ -23,7 +25,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     const [title, setTitle] = useState('DiceTools - Free Online Tools');
     const [description, setDescription] = useState('A powerful suite of 80+ free online tools for text manipulation, data conversion, development, AI, PDF editing, and more.');
     const [url, setUrl] = useState('https://dicetools.com');
-    const [focusKeyword, setFocusKeyword] = useState('free online tools'); // Completed useState
+    const [focusKeyword, setFocusKeyword] = useState('free online tools');
     const [optimization, setOptimization] = useState<SerpOptimization | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -39,10 +41,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
         setOptimization(null);
 
         try {
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: `You are an AI SEO expert specializing in Google SERP snippet optimization. Analyze the provided title, description, and focus keyword for a webpage. Provide actionable recommendations to improve click-through rate (CTR) and relevance, considering character limits and user psychology. Also, give a conceptual estimate of the CTR based on the snippet quality. Respond in a JSON object format. The structure should be:
+            const systemPrompt = `You are an AI SEO expert specializing in Google SERP snippet optimization. Analyze the provided title, description, and focus keyword for a webpage. Provide actionable recommendations to improve click-through rate (CTR) and relevance, considering character limits and user psychology. Also, give a conceptual estimate of the CTR based on the snippet quality. Respond as only a valid JSON object. The structure should be:
 {
   "title": "Optimized Title Suggestion",
   "description": "Optimized Description Suggestion",
@@ -50,34 +49,26 @@ const GoogleSerpPreviewTool: React.FC = () => {
   "aiRecommendations": ["recommendation 1", "recommendation 2"],
   "conceptualClickThroughRate": "e.g., Good (5-8%)"
 }
-Ensure the suggested title and description adhere to typical SERP display limits (e.g., ~60 chars for title, ~160 chars for description).`,
-                },
-                {
-                    role: 'user',
-                    content: `Analyze the following SERP snippet and provide optimization recommendations:
+Ensure the suggested title and description adhere to typical SERP display limits (e.g., ~60 chars for title, ~160 chars for description). Do not include any text before or after the JSON object.`;
+
+            const userPrompt = `Analyze the following SERP snippet and provide optimization recommendations:
 Title: "${title}"
 Description: "${description}"
 URL: "${url}"
-Focus Keyword: "${focusKeyword}"`,
-                },
-            ];
+Focus Keyword: "${focusKeyword}"`;
+            
+            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\n${userPrompt} [/INST]`;
 
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.8,
-                max_tokens: 1000,
-                response_format: { type: "json_object" },
-            });
+            const output = await runReplicate(LLAMA_MODEL, { prompt });
 
-            // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
-            const parsedOptimization: SerpOptimization = JSON.parse(jsonString);
+            const jsonString = Array.isArray(output) ? output.join('') : String(output);
+            const cleanedJsonString = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
+            const parsedOptimization: SerpOptimization = JSON.parse(cleanedJsonString);
             setOptimization(parsedOptimization);
 
         } catch (err: any) {
             console.error('AI SERP Optimization Error:', err);
-            setError(err.message || 'An AI error occurred during SERP optimization. Please try again.');
+            setError(err.message || 'An AI error occurred during SERP optimization. The model may have returned an invalid format.');
         } finally {
             setIsLoading(false);
         }
@@ -86,7 +77,7 @@ Focus Keyword: "${focusKeyword}"`,
     const longDescription = (
         <>
             <p>
-                Our AI Google SERP Preview & Optimizer, powered by OpenRouter, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
+                Our AI Google SERP Preview & Optimizer, powered by Replicate, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
             </p>
             <p>
                 Input your current meta title, description, and target keyword, and the AI will suggest enhancements, ensuring your snippet is enticing and relevant to searchers. This is an indispensable tool for SEO specialists, content marketers, and webmasters aiming to stand out in competitive search results.
@@ -103,7 +94,7 @@ Focus Keyword: "${focusKeyword}"`,
     return (
         <ToolPageLayout
             title="AI Google SERP Preview & Optimizer"
-            description="Preview your SERP snippet and get AI-powered recommendations to improve it via OpenRouter."
+            description="Preview your SERP snippet and get AI-powered recommendations to improve it via Replicate."
             longDescription={longDescription}
         >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { callOpenRouterApi, OpenRouterMessage } from '../../utils/openRouterApi';
+import { runReplicate } from '../../utils/openRouterApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
+
+const LLAMA_MODEL = 'meta/llama-2-7b-chat:13c3c6e434317316106c5957d19a27985472483582a472c57706d7d56e72ca41';
 
 interface KeywordInsight {
     keyword: string;
@@ -29,10 +31,7 @@ const KeywordResearchTool: React.FC = () => {
         setInsights(null);
 
         try {
-            const messages: OpenRouterMessage[] = [
-                {
-                    role: 'system',
-                    content: `You are an expert SEO keyword research assistant. Your task is to provide detailed insights for a given seed keyword, including search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide the output in a JSON array format, where each object represents a keyword insight. The structure should be:
+            const systemPrompt = `You are an expert SEO keyword research assistant. Your task is to provide detailed insights for a given seed keyword, including search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide the output as only a valid JSON array, where each object represents a keyword insight. The structure should be:
 [
   {
     "keyword": "seed keyword or related query",
@@ -41,33 +40,23 @@ const KeywordResearchTool: React.FC = () => {
     "searchVolume": "e.g., 1K-10K",
     "cpc": "e.g., $0.50 - $1.50",
     "relatedQueries": ["query 1", "query 2"]
-  },
-  ...
+  }
 ]
-Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict without real tools. Prioritize accuracy and relevance.`,
-                },
-                {
-                    role: 'user',
-                    content: `Generate keyword insights for the seed keyword: "${seedKeyword}"`,
-                },
-            ];
+Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict without real tools. Prioritize accuracy and relevance. Do not include any text before or after the JSON array.`;
 
-            const response = await callOpenRouterApi({
-                model: 'google/gemini-2.5-flash-image', // Changed model
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 1000,
-                response_format: { type: "json_object" },
-            });
+            const prompt = `[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\nGenerate keyword insights for the seed keyword: "${seedKeyword}" [/INST]`;
 
-            // FIX: Add type assertion to `string` because `response_format: { type: "json_object" }` guarantees a JSON string output.
-            const jsonString = (response.choices?.[0]?.message?.content as string) || '';
-            const parsedInsights: KeywordInsight[] = JSON.parse(jsonString);
+            const output = await runReplicate(LLAMA_MODEL, { prompt });
+
+            const jsonString = Array.isArray(output) ? output.join('') : String(output);
+            // Clean the output to ensure it's valid JSON
+            const cleanedJsonString = jsonString.substring(jsonString.indexOf('['), jsonString.lastIndexOf(']') + 1);
+            const parsedInsights: KeywordInsight[] = JSON.parse(cleanedJsonString);
             setInsights(parsedInsights);
 
         } catch (err: any) {
             console.error('AI Keyword Research Error:', err);
-            setError(err.message || 'An AI error occurred during keyword research. Please try a different keyword or format.');
+            setError(err.message || 'An AI error occurred during keyword research. The model may have returned an invalid format.');
         } finally {
             setIsLoading(false);
         }
@@ -76,7 +65,7 @@ Provide insights for the seed keyword and 2-3 highly relevant related queries. F
     const longDescription = (
         <>
             <p>
-                Our AI Keyword Research Tool, powered by OpenRouter, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
+                Our AI Keyword Research Tool, powered by Replicate, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
             </p>
             <p>
                 Simply input your primary keyword, and our AI will generate a structured JSON output with conceptual data that helps you understand market demand and competition. This facilitates more informed decisions for content creation and paid advertising campaigns.
@@ -94,7 +83,7 @@ Provide insights for the seed keyword and 2-3 highly relevant related queries. F
     return (
         <ToolPageLayout
             title="AI Keyword Research Tool"
-            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via OpenRouter."
+            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via Replicate."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">
