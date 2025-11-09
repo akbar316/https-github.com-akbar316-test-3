@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { ToolPageLayout } from '../../components/ToolPageLayout';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { fileToDataUrl } from '../../utils/imageUtils';
-import { editImageWithGemini } from '../../utils/openRouterApi';
+import { editImageWithGemini } from '../../utils/geminiApi';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 const ImageEditor: React.FC = () => {
     const [baseImageFile, setBaseImageFile] = useState<File | null>(null);
@@ -11,6 +12,7 @@ const ImageEditor: React.FC = () => {
     const [editedImageUrl, setEditedImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const { invalidateApiKey } = useApiKey();
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -42,7 +44,13 @@ const ImageEditor: React.FC = () => {
             setEditedImageUrl(`data:image/png;base64,${outputBase64}`);
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'An error occurred while editing the image.');
+            const errorMessage = err.message || 'An error occurred while editing the image.';
+            if (errorMessage.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }

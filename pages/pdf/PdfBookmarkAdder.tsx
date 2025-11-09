@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import PdfToolLayout from './PdfToolPlaceholder';
 import { CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiVisionWithDataUrl } from '../../utils/openRouterApi';
+import { runGeminiVisionWithDataUrl } from '../../utils/geminiApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 // --- DYNAMIC LIBRARY LOADING ---
 declare global {
@@ -24,6 +25,7 @@ const PdfBookmarkAdder: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [outputText, setOutputText] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { invalidateApiKey } = useApiKey();
 
     const longDescription = (
         <>
@@ -76,7 +78,13 @@ const PdfBookmarkAdder: React.FC = () => {
 
         } catch (e: any) {
             console.error(e);
-            setError(`Failed to generate table of contents using AI: ${e.message}`);
+            const errorMessage = e.message || 'Failed to generate table of contents using AI.';
+            if (errorMessage.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsProcessing(false);
         }

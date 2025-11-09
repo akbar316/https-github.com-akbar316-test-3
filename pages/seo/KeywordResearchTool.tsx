@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/geminiApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 interface KeywordInsight {
     keyword: string;
@@ -18,6 +19,7 @@ const KeywordResearchTool: React.FC = () => {
     const [insights, setInsights] = useState<KeywordInsight[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const { invalidateApiKey } = useApiKey();
 
     const generateInsights = async () => {
         if (!seedKeyword.trim()) {
@@ -54,7 +56,13 @@ const KeywordResearchTool: React.FC = () => {
 
         } catch (err: any) {
             console.error('AI Keyword Research Error:', err);
-            setError(err.message || 'An AI error occurred during keyword research. The model may have returned an invalid format.');
+            const errorMessage = err.message || 'An AI error occurred during keyword research.';
+            if (errorMessage.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }

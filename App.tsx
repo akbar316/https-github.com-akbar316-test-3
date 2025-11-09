@@ -7,6 +7,8 @@ import { tools } from './utils/tools';
 import useLocalStorage from './hooks/useLocalStorage';
 import { isWebGLAvailable } from './utils/webgl';
 import useIsDesktop from './hooks/useIsDesktop';
+import { ApiKeyProvider } from './context/ApiKeyContext';
+import ApiKeyGate from './components/ApiKeyGate';
 
 // Lazy load the heavy 3D background
 const ThreeBackground = React.lazy(() => import('./components/ThreeBackground'));
@@ -44,6 +46,13 @@ const ScrollToAnchor: React.FC = () => {
 
   return null;
 };
+
+const aiToolPaths = new Set([
+  '/text-to-image-generator', '/ai-video-generator', '/ai-image-editor', '/ai-hairstyle-try-on',
+  '/pdf-to-word', '/pdf-to-excel', '/pdf-to-powerpoint', '/pdf-to-html', '/pdf-ocr', '/pdf-bookmark-adder',
+  '/keyword-research-tool', '/backlink-checker', '/website-analyzer', '/broken-link-checker',
+  '/domain-authority-checker', '/google-serp-preview'
+]);
 
 
 const App: React.FC = () => {
@@ -93,41 +102,55 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <HashRouter>
-      <ScrollToAnchor />
-      {/* Only render the heavy 3D background on desktop devices */}
-      {isDesktop && animationEnabled && animationAvailable && (
-        <Suspense fallback={null}>
-          <ThreeBackground onInitError={handleAnimationError} />
-        </Suspense>
-      )}
-      <div className="flex flex-col min-h-screen relative z-10">
-        <Header 
-          animationEnabled={animationEnabled} 
-          onToggleAnimation={handleToggleAnimation}
-          // Only show animation toggle if it's available and on desktop
-          animationAvailable={isDesktop && animationAvailable}
-        />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              {tools.map((tool) => (
-                <Route
-                  key={tool.path}
-                  path={tool.path}
-                  element={<tool.component />}
-                />
-              ))}
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/contact-us" element={<ContactUs />} />
-            </Routes>
+    <ApiKeyProvider>
+      <HashRouter>
+        <ScrollToAnchor />
+        {/* Only render the heavy 3D background on desktop devices */}
+        {isDesktop && animationEnabled && animationAvailable && (
+          <Suspense fallback={null}>
+            <ThreeBackground onInitError={handleAnimationError} />
           </Suspense>
-        </main>
-        <Footer />
-      </div>
-    </HashRouter>
+        )}
+        <div className="flex flex-col min-h-screen relative z-10">
+          <Header 
+            animationEnabled={animationEnabled} 
+            onToggleAnimation={handleToggleAnimation}
+            // Only show animation toggle if it's available and on desktop
+            animationAvailable={isDesktop && animationAvailable}
+          />
+          <main className="flex-grow container mx-auto px-4 py-8">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                {tools.map((tool) => {
+                  const ToolComponent = tool.component;
+                  const isAiTool = aiToolPaths.has(tool.path);
+                  return (
+                    <Route
+                      key={tool.path}
+                      path={tool.path}
+                      element={
+                        isAiTool ? (
+                          <ApiKeyGate>
+                            <ToolComponent />
+                          </ApiKeyGate>
+                        ) : (
+                          <ToolComponent />
+                        )
+                      }
+                    />
+                  );
+                })}
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/contact-us" element={<ContactUs />} />
+              </Routes>
+            </Suspense>
+          </main>
+          <Footer />
+        </div>
+      </HashRouter>
+    </ApiKeyProvider>
   );
 };
 

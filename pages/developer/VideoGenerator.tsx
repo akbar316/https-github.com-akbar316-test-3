@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ToolPageLayout } from '../../components/ToolPageLayout';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { GoogleGenAI } from '@google/genai';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 const loadingMessages = [
     "Warming up the digital director's chair...",
@@ -14,7 +15,7 @@ const loadingMessages = [
 ];
 
 const VideoGenerator: React.FC = () => {
-    const [apiKeySelected, setApiKeySelected] = useState<boolean | null>(null);
+    const { invalidateApiKey } = useApiKey();
     const [prompt, setPrompt] = useState('A neon hologram of a cat driving at top speed');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -28,16 +29,6 @@ const VideoGenerator: React.FC = () => {
     
     const loadingMessageIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Check for API key on mount
-    useEffect(() => {
-        const checkApiKey = async () => {
-            // @ts-ignore
-            const hasKey = await window.aistudio.hasSelectedApiKey();
-            setApiKeySelected(hasKey);
-        };
-        checkApiKey();
-    }, []);
-
     // Cleanup object URLs
     useEffect(() => {
         return () => {
@@ -46,12 +37,6 @@ const VideoGenerator: React.FC = () => {
             }
         };
     }, [videoUrl]);
-
-    const handleSelectKey = async () => {
-        // @ts-ignore
-        await window.aistudio.openSelectKey();
-        setApiKeySelected(true); // Assume success to avoid race conditions
-    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -148,10 +133,11 @@ const VideoGenerator: React.FC = () => {
             console.error(err);
             let errorMessage = err.message || 'An unknown error occurred during video generation.';
             if (errorMessage.includes("Requested entity was not found.")) {
-                errorMessage = "API Key not found or invalid. Please select a valid API key.";
-                setApiKeySelected(false);
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                 setError(errorMessage);
             }
-            setError(errorMessage);
         } finally {
             setIsLoading(false);
             stopLoadingMessages();
@@ -171,35 +157,6 @@ const VideoGenerator: React.FC = () => {
             </p>
         </>
     );
-    
-    if (apiKeySelected === null) {
-        return (
-             <ToolPageLayout title="AI Video Generator" description="Generate high-quality videos from text prompts or images using AI." longDescription={longDescription}>
-                <div className="flex justify-center items-center h-40">
-                    <AiLoadingSpinner message="Checking API Key..." />
-                </div>
-             </ToolPageLayout>
-        );
-    }
-
-    if (!apiKeySelected) {
-        return (
-             <ToolPageLayout title="AI Video Generator" description="Generate high-quality videos from text prompts or images using AI." longDescription={longDescription}>
-                <div className="text-center bg-brand-bg p-8 rounded-lg">
-                    <h2 className="text-2xl font-bold text-brand-primary mb-4">API Key Required</h2>
-                    <p className="text-brand-text-secondary mb-6">
-                        This advanced tool uses the Veo video generation model, which requires a Google Cloud API key with the Vertex AI API enabled. Please select your key to continue.
-                    </p>
-                    <button onClick={handleSelectKey} className="bg-brand-primary text-white px-6 py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg">
-                        Select API Key
-                    </button>
-                    <p className="text-xs text-brand-text-secondary mt-4">
-                         For more information, see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">billing documentation</a>.
-                    </p>
-                </div>
-             </ToolPageLayout>
-        );
-    }
     
     return (
         <ToolPageLayout

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/openRouterApi';
+import { runGeminiWithSchema } from '../../utils/geminiApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 interface SerpOptimization {
     title: string;
@@ -28,6 +29,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     const [optimization, setOptimization] = useState<SerpOptimization | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const { invalidateApiKey } = useApiKey();
 
     const generateRecommendations = async () => {
         if (!title.trim() || !description.trim() || !focusKeyword.trim()) {
@@ -66,7 +68,13 @@ const GoogleSerpPreviewTool: React.FC = () => {
 
         } catch (err: any) {
             console.error('AI SERP Optimization Error:', err);
-            setError(err.message || 'An AI error occurred during SERP optimization. The model may have returned an invalid format.');
+            const errorMessage = err.message || 'An AI error occurred during SERP optimization.';
+            if (errorMessage.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }

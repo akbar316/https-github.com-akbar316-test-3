@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { ToolPageLayout } from '../../components/ToolPageLayout';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
-import { generateImageWithGemini } from '../../utils/openRouterApi';
+import { generateImageWithGemini } from '../../utils/geminiApi';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 const TextToImageGenerator: React.FC = () => {
     const [prompt, setPrompt] = useState('A photorealistic image of a futuristic city with flying cars, neon lights, and lush vertical gardens on skyscrapers.');
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const { invalidateApiKey } = useApiKey();
 
     const generateImage = async () => {
         if (!prompt.trim()) {
@@ -23,7 +25,13 @@ const TextToImageGenerator: React.FC = () => {
             setImageUrl(`data:image/png;base64,${outputBase64}`);
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'An error occurred while generating the image.');
+            const errorMessage = err.message || 'An error occurred while generating the image.';
+            if (errorMessage.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                invalidateApiKey();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
