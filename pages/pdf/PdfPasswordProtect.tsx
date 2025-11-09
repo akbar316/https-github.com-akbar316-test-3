@@ -53,7 +53,7 @@ const PdfPasswordProtect: React.FC = () => {
                 userPassword: password,
                 ownerPassword: password, // Use the same password for owner permissions
                 permissions: {
-                    printing: 'high',
+                    printing: true,
                     modifying: false,
                     copying: false,
                     annotating: false,

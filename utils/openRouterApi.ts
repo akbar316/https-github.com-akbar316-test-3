@@ -1,9 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, Type, GenerateContentParameters } from "@google/genai";
 
-// The guidelines are strict to use process.env.API_KEY.
-// We assume the build environment makes this available to the client-side code.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 /**
  * A helper function to convert a File object to a base64 encoded string for the Gemini API.
  * @param file The file to convert.
@@ -24,6 +20,7 @@ const fileToGenerativePart = async (file: File) => {
  * Runs a Gemini model for text-only prompts.
  */
 export const runGemini = async (model: string, prompt: string): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
         model,
         contents: prompt,
@@ -36,6 +33,7 @@ export const runGemini = async (model: string, prompt: string): Promise<string> 
  * Runs a Gemini vision model with a data URL (e.g., from a canvas).
  */
 export const runGeminiVisionWithDataUrl = async (prompt: string, dataUrl: string): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const mimeType = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
     const base64Data = dataUrl.split(',')[1];
     const imagePart = {
@@ -54,6 +52,7 @@ export const runGeminiVisionWithDataUrl = async (prompt: string, dataUrl: string
  * Generates an image using Gemini.
  */
 export const generateImageWithGemini = async (prompt: string): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [{ text: prompt }] },
@@ -74,6 +73,7 @@ export const generateImageWithGemini = async (prompt: string): Promise<string> =
  * Edits an image using Gemini.
  */
 export const editImageWithGemini = async (prompt: string, file: File): Promise<string> => {
+     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
      const imagePart = await fileToGenerativePart(file);
      const textPart = { text: prompt };
      const response: GenerateContentResponse = await ai.models.generateContent({
@@ -95,6 +95,7 @@ export const editImageWithGemini = async (prompt: string, file: File): Promise<s
  * Runs a Gemini model with a specified JSON schema for structured output.
  */
 export const runGeminiWithSchema = async (model: string, prompt: string, schema: any): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
         model,
         contents: prompt,
