@@ -110,10 +110,6 @@ const RomanNumeralConverter: React.FC = () => {
                     />
                 </div>
                 {error && <p className="text-red-500 text-center">{error}</p>}
-
-                 <div className="pt-2 text-center">
-                    <p className="text-sm text-brand-text-secondary">AI Fun Fact feature is currently unavailable.</p>
-                </div>
             </div>
         </ToolPageLayout>
     );

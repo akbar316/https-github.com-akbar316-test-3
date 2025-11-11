@@ -45,7 +45,6 @@ const RegexTester: React.FC = () => {
         <p>
           Master the art of regular expressions with our Advanced Regex Tester. This comprehensive tool is designed for developers of all skill levels, from beginners learning the basics to experts crafting complex patterns. The real-time interface allows you to instantly test your regex against a sample string, providing immediate visual feedback with highlighted matches. You can easily modify your pattern and flags (like global, multiline, and case-insensitive) to see how they affect the results. The detailed "Matches & Groups" panel breaks down each match and its corresponding capture groups, making debugging and validation a breeze.
         </p>
-        <p className="text-sm text-brand-text-secondary mt-4">AI-powered generation and explanation features are currently unavailable.</p>
       </>
     );
 
@@ -84,10 +83,6 @@ const RegexTester: React.FC = () => {
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <div className="bg-brand-bg p-4 rounded-lg space-y-3">
-                        <h3 className="font-semibold text-brand-primary">AI Tools</h3>
-                        <p className="text-sm text-brand-text-secondary">AI-powered regex generation and explanation are currently unavailable.</p>
-                    </div>
                     <CheatSheet />
                 </div>
             </div>

@@ -27,7 +27,6 @@ const JsMinifier: React.FC = () => {
         <p>
           Optimize your JavaScript with our JS Cleaner. This powerful tool is designed for web developers who want to prepare their code for production environments. It offers distinct functionalities to enhance your scripts. The "Clean Code" feature acts as a simple minifier, stripping out all comments and console log statements, and collapsing unnecessary whitespace. This process reduces the file size of your scripts, leading to faster page load times and improved performance for your users. It's an essential step in any deployment pipeline for creating lean, efficient code.
         </p>
-        <p className="text-sm text-brand-text-secondary mt-4">AI-powered obfuscation is currently unavailable.</p>
       </>
     );
 

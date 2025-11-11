@@ -2,7 +2,7 @@ import type React from 'react';
 
 export type ToolCategory = 'AI' | 'PDF' | 'Text' | 'Converters' | 'Developer' | 'Utility' | 'Misc' | 'Student' | 'SEO';
 
-export type ApiProvider = 'gemini' | 'deepseek' | 'google-psi';
+export type ApiProvider = 'google-psi';
 
 export interface Tool {
   path: string;

@@ -48,8 +48,8 @@ const FileListItem: React.FC<{ file: File, onRemove: () => void, isDraggable?: b
         {...dragProps}
     >
         <div className="flex items-center gap-3 w-full min-w-0">
-            {isDraggable && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-brand-text-secondary"><line x1="9" y1="12" x2="21" y2="12"></line><line x1="9" y1="6" x2="21" y2="6"></line><line x1="9" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>}
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-brand-primary"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            {isDraggable && <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-brand-text-secondary"><line x1="9" y1="12" x2="21" y2="12"></line><line x1="9" y1="6" x2="21" y2="6"></line><line x1="9" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-brand-primary"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             <div className="flex-grow min-w-0">
                 <p className="truncate text-brand-text-primary">{file.name}</p>
                 <p className="text-xs text-brand-text-secondary">{formatBytes(file.size)}</p>
@@ -191,7 +191,6 @@ const BatchPdfProcessor: React.FC = () => {
                             <option value="merge">Merge all into one PDF</option>
                             <option value="compress">Compress all files individually</option>
                         </select>
-                        <p className="text-sm text-brand-text-secondary">AI text extraction is currently unavailable.</p>
                     </div>
                 </div>
 

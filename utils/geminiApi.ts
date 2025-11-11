@@ -1,108 +1,106 @@
-import { GoogleGenAI, GenerateContentResponse, Modality, Type, GenerateContentParameters } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
+import { fileToDataUrl } from "./imageUtils";
 
 /**
- * A helper function to convert a File object to a base64 encoded string for the Gemini API.
- * @param file The file to convert.
- * @returns A promise that resolves with an object suitable for the Gemini API.
+ * FIX: Implemented runGeminiVisionWithDataUrl to fix missing export error.
+ * This function sends a prompt and an image (as a data URL) to the Gemini vision model.
  */
-const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-    reader.readAsDataURL(file);
-  });
-  return {
-    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-  };
-};
-
-/**
- * Runs a Gemini model for text-only prompts.
- */
-export const runGemini = async (model: string, prompt: string): Promise<string> => {
+export const runGeminiVisionWithDataUrl = async (prompt: string, imageUrl: string): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-    });
-    return response.text;
-};
 
+    const parts = imageUrl.split(',');
+    const mimeTypePart = parts[0];
+    const base64Data = parts[1];
 
-/**
- * Runs a Gemini vision model with a data URL (e.g., from a canvas).
- */
-export const runGeminiVisionWithDataUrl = async (prompt: string, dataUrl: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const mimeType = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
-    const base64Data = dataUrl.split(',')[1];
-    const imagePart = {
-        inlineData: { data: base64Data, mimeType },
-    };
-    const textPart = { text: prompt };
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model: 'gemini-flash-lite-latest',
-        contents: { parts: [imagePart, textPart] },
-    });
-    return response.text;
-};
-
-
-/**
- * Generates an image using Gemini.
- */
-export const generateImageWithGemini = async (prompt: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts: [{ text: prompt }] },
-        config: {
-            responseModalities: [Modality.IMAGE],
-        },
-    });
-    for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-            return part.inlineData.data; // base64 encoded string
-        }
+    if (!mimeTypePart || !base64Data) {
+        throw new Error("Invalid data URL for image.");
     }
-    throw new Error("No image data found in Gemini response.");
+    const mimeTypeMatch = mimeTypePart.match(/:(.*?);/);
+    const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'application/octet-stream';
+
+    const imagePart = {
+        inlineData: {
+            mimeType,
+            data: base64Data,
+        },
+    };
+
+    const textPart = {
+        text: prompt,
+    };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts: [imagePart, textPart] },
+    });
+
+    return response.text;
 };
 
-
 /**
- * Edits an image using Gemini.
+ * FIX: Implemented editImageWithGemini to fix missing export error.
+ * This function sends a prompt and a base image to the Gemini image editing model.
  */
-export const editImageWithGemini = async (prompt: string, file: File): Promise<string> => {
-     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-     const imagePart = await fileToGenerativePart(file);
-     const textPart = { text: prompt };
-     const response: GenerateContentResponse = await ai.models.generateContent({
+export const editImageWithGemini = async (prompt: string, baseImageFile: File): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const dataUrl = await fileToDataUrl(baseImageFile);
+    const base64ImageData = dataUrl.split(',')[1];
+    
+    const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: { parts: [imagePart, textPart] },
+        contents: {
+            parts: [
+                {
+                    inlineData: {
+                        data: base64ImageData,
+                        mimeType: baseImageFile.type,
+                    },
+                },
+                {
+                    text: prompt,
+                },
+            ],
+        },
         config: {
             responseModalities: [Modality.IMAGE],
         },
     });
-     for (const part of response.candidates[0].content.parts) {
+
+    for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
             return part.inlineData.data;
         }
     }
-    throw new Error("No edited image data found in Gemini response.");
+
+    throw new Error("No image was generated in the response.");
 };
 
 /**
- * Runs a Gemini model with a specified JSON schema for structured output.
+ * FIX: Implemented generateImageWithGemini to fix missing export error.
+ * This function sends a prompt to the Gemini image generation model.
  */
-export const runGeminiWithSchema = async (model: string, prompt: string, schema: any): Promise<string> => {
+export const generateImageWithGemini = async (prompt: string): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
+    
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+            parts: [
+                {
+                    text: prompt,
+                },
+            ],
+        },
         config: {
-            responseMimeType: "application/json",
-            responseSchema: schema
-        }
+            responseModalities: [Modality.IMAGE],
+        },
     });
-    return response.text;
+    
+    for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return part.inlineData.data;
+        }
+    }
+
+    throw new Error("No image was generated in the response.");
 };

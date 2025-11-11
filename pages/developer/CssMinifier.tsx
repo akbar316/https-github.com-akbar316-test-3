@@ -27,7 +27,6 @@ const CssMinifier: React.FC = () => {
         <p>
           Enhance your website's performance and maintainability with our CSS Minifier. This tool is an essential utility for front-end developers aiming to write clean, efficient, and fast-loading stylesheets. It offers powerful modes to handle your CSS code. The "Minify" function provides a quick and effective way to reduce file size by stripping out all comments, extra whitespace, and unnecessary characters. This results in a smaller CSS file that browsers can download and parse more quickly, directly improving your site's loading speed and user experience.
         </p>
-        <p className="text-sm text-brand-text-secondary mt-4">AI-powered optimization is currently unavailable.</p>
       </>
     );
 

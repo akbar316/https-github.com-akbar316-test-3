@@ -76,7 +76,6 @@ const JsonFormatter: React.FC = () => {
           <li><strong>Format & Minify:</strong> Instantly beautify your JSON for readability or minify it to reduce file size. The tool also validates your JSON structure, highlighting any errors.</li>
           <li><strong>Tree View:</strong> Visualize your JSON in a collapsible tree structure, making it easy to navigate and understand complex, nested objects and arrays.</li>
         </ul>
-        <p className="text-sm text-brand-text-secondary mt-4">AI-powered query and conversion features are currently unavailable.</p>
       </>
     );
 

@@ -82,9 +82,6 @@ const WordCounter: React.FC = () => {
                  <div className="text-sm text-brand-text-secondary">Readability Score</div>
                  <p className="text-xs text-brand-text-secondary mt-1">(Flesch-Kincaid)</p>
             </div>
-            <div className="space-y-3 pt-4 border-t border-brand-border">
-                <p className="text-center text-sm text-brand-text-secondary">AI features like summarization and proofreading are currently unavailable.</p>
-            </div>
         </div>
       </div>
     </ToolPageLayout>

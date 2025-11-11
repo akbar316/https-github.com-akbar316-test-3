@@ -19,16 +19,6 @@ const ApiKeyGate: React.FC<ApiKeyGateProps> = ({ children, provider }) => {
     }
 
     const providerDetails = {
-        'gemini': {
-            name: 'Google AI',
-            helpText: 'For information on billing, please see the official Google AI billing documentation.',
-            helpLink: 'https://ai.google.dev/gemini-api/docs/billing',
-        },
-        'deepseek': {
-            name: 'DeepSeek',
-            helpText: 'The DeepSeek API is currently free for certain usage tiers. Please check their official website for details.',
-            helpLink: 'https://www.deepseek.com/en/pricing',
-        },
         'google-psi': {
             name: 'Google PageSpeed Insights',
             helpText: 'The PageSpeed Insights API has a free usage tier. See the official documentation for limits.',
