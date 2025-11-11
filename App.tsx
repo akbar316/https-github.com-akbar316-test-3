@@ -9,7 +9,8 @@ import { isWebGLAvailable } from './utils/webgl';
 import useIsDesktop from './hooks/useIsDesktop';
 import { ApiKeyProvider } from './context/ApiKeyContext';
 import ApiKeyGate from './components/ApiKeyGate';
-import DeepSeekApiKeyGate from './components/DeepSeekApiKeyGate';
+import { ApiProvider } from './types';
+
 
 // Lazy load the heavy 3D background
 const ThreeBackground = React.lazy(() => import('./components/ThreeBackground'));
@@ -122,10 +123,8 @@ const App: React.FC = () => {
                   
                   let element = <ToolComponent />;
 
-                  if (provider === 'gemini' || provider === 'google-psi') {
-                    element = <ApiKeyGate>{element}</ApiKeyGate>;
-                  } else if (provider === 'deepseek') {
-                    element = <DeepSeekApiKeyGate>{element}</DeepSeekApiKeyGate>;
+                  if (provider) {
+                    element = <ApiKeyGate provider={provider}>{element}</ApiKeyGate>;
                   }
 
                   return (

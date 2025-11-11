@@ -19,9 +19,7 @@ const KeywordResearchTool: React.FC = () => {
     const [insights, setInsights] = useState<KeywordInsight[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    // This tool now uses DeepSeek, so ApiKeyContext is no longer needed for Gemini key checks.
-    // However, we leave the hooks in case of future changes, but disable the button based on the env var.
-    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const generateInsights = async () => {
         if (!seedKeyword.trim()) {
@@ -59,11 +57,8 @@ const KeywordResearchTool: React.FC = () => {
         } catch (err: any) {
             console.error('AI Keyword Research Error:', err);
             const errorMessage = err.message || 'An AI error occurred during keyword research.';
-            if (errorMessage.includes("DeepSeek API key is not configured")) {
-                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
-            } else {
-                setError(errorMessage);
-            }
+            setError(`An error occurred. Please ensure you have selected the correct DeepSeek API key. Error: ${errorMessage}`);
+            invalidateApiKey();
         } finally {
             setIsLoading(false);
         }
@@ -110,7 +105,7 @@ const KeywordResearchTool: React.FC = () => {
 
                 <button
                     onClick={generateInsights}
-                    disabled={isLoading || !seedKeyword.trim() || !hasDeepSeekKey}
+                    disabled={isLoading || !seedKeyword.trim() || isApiKeyLoading || !apiKeySelected}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Generating insights..." /> : 'Generate Keyword Insights'}

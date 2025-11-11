@@ -3,6 +3,7 @@ import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
 import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
+import { useApiKey } from '../../context/ApiKeyContext';
 
 interface BacklinkAnalysis {
     domain: string;
@@ -22,7 +23,7 @@ const BacklinkChecker: React.FC = () => {
     const [analysis, setAnalysis] = useState<BacklinkAnalysis | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
+    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
 
     const runAnalysis = async () => {
         if (!domain.trim()) {
@@ -65,11 +66,8 @@ const BacklinkChecker: React.FC = () => {
         } catch (err: any) {
             console.error('AI Backlink Analysis Error:', err);
             const errorMessage = err.message || 'An AI error occurred during backlink analysis.';
-            if (errorMessage.includes("DeepSeek API key is not configured")) {
-                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
-            } else {
-                setError(errorMessage);
-            }
+            setError(`An error occurred. Please ensure you have selected the correct DeepSeek API key. Error: ${errorMessage}`);
+            invalidateApiKey();
         } finally {
             setIsLoading(false);
         }
@@ -119,7 +117,7 @@ const BacklinkChecker: React.FC = () => {
 
                 <button
                     onClick={runAnalysis}
-                    disabled={isLoading || !domain.trim() || !hasDeepSeekKey}
+                    disabled={isLoading || !domain.trim() || isApiKeyLoading || !apiKeySelected}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Analyzing backlinks..." /> : 'Analyze Backlinks with AI'}

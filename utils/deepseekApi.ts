@@ -1,7 +1,7 @@
 export const runDeepSeekWithSchema = async (model: string, prompt: string, schema: any): Promise<string> => {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.API_KEY;
     if (!apiKey) {
-        throw new Error("DeepSeek API key is not configured. Please set the DEEPSEEK_API_KEY environment variable.");
+        throw new Error("API key not found. Please select your DeepSeek API key using the 'Select API Key' button.");
     }
 
     // DeepSeek needs explicit instruction in the prompt for JSON mode.
@@ -32,8 +32,10 @@ export const runDeepSeekWithSchema = async (model: string, prompt: string, schem
     const jsonString = data.choices[0].message.content;
     
     try {
-        JSON.parse(jsonString); // Validate
-        return jsonString;
+        // Handle potential markdown ```json ... ``` wrapper
+        const cleanedJsonString = jsonString.replace(/^```json\s*|```\s*$/g, '');
+        JSON.parse(cleanedJsonString); // Validate
+        return cleanedJsonString;
     } catch (e) {
         throw new Error("DeepSeek API did not return a valid JSON object.");
     }
