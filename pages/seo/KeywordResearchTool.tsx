@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/geminiApi';
+import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
 import { useApiKey } from '../../context/ApiKeyContext';
@@ -19,7 +19,9 @@ const KeywordResearchTool: React.FC = () => {
     const [insights, setInsights] = useState<KeywordInsight[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
+    // This tool now uses DeepSeek, so ApiKeyContext is no longer needed for Gemini key checks.
+    // However, we leave the hooks in case of future changes, but disable the button based on the env var.
+    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
 
     const generateInsights = async () => {
         if (!seedKeyword.trim()) {
@@ -50,16 +52,15 @@ const KeywordResearchTool: React.FC = () => {
             
             const prompt = `You are an expert SEO keyword research assistant. Provide detailed insights for the seed keyword "${seedKeyword}". Include search intent, estimated difficulty, search volume, Cost Per Click (CPC) range, and related long-tail queries. Provide insights for the seed keyword and 2-3 highly relevant related queries. For search volume and CPC, use ranges as specific numbers are hard to predict.`;
 
-            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
+            const jsonString = await runDeepSeekWithSchema('deepseek-chat', prompt, schema);
             const parsedInsights: KeywordInsight[] = JSON.parse(jsonString);
             setInsights(parsedInsights);
 
         } catch (err: any) {
             console.error('AI Keyword Research Error:', err);
             const errorMessage = err.message || 'An AI error occurred during keyword research.';
-            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
-                setError("API Key not found or invalid. Please select a valid API key.");
-                invalidateApiKey();
+            if (errorMessage.includes("DeepSeek API key is not configured")) {
+                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
             } else {
                 setError(errorMessage);
             }
@@ -71,7 +72,7 @@ const KeywordResearchTool: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI Keyword Research Tool, powered by the Gemini API, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
+                Our AI Keyword Research Tool, powered by the DeepSeek API, provides you with crucial insights to enhance your SEO strategy. Instead of relying on expensive tools, you can get AI-driven conceptual analysis for search intent, estimated difficulty, search volume ranges, and potential Cost Per Click (CPC) for any seed keyword. This tool is designed to give marketers, content creators, and SEO specialists a quick overview of keyword potential and discover relevant long-tail queries.
             </p>
             <p>
                 Simply input your primary keyword, and our AI will generate structured data that helps you understand market demand and competition. This facilitates more informed decisions for content creation and paid advertising campaigns.
@@ -89,7 +90,7 @@ const KeywordResearchTool: React.FC = () => {
     return (
         <ToolPageLayout
             title="AI Keyword Research Tool"
-            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via the Gemini API."
+            description="Get AI-driven insights including search intent, difficulty, volume, and CPC via the DeepSeek API."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">
@@ -109,7 +110,7 @@ const KeywordResearchTool: React.FC = () => {
 
                 <button
                     onClick={generateInsights}
-                    disabled={isLoading || !seedKeyword.trim() || isApiKeyLoading || !apiKeySelected}
+                    disabled={isLoading || !seedKeyword.trim() || !hasDeepSeekKey}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Generating insights..." /> : 'Generate Keyword Insights'}

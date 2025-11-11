@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/geminiApi';
+import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
-import { useApiKey } from '../../context/ApiKeyContext';
 
 interface BrokenLinkReport {
     domain: string;
@@ -17,7 +16,7 @@ const BrokenLinkChecker: React.FC = () => {
     const [report, setReport] = useState<BrokenLinkReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
+    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
 
     const runAnalysis = async () => {
         if (!domain.trim()) {
@@ -54,16 +53,15 @@ const BrokenLinkChecker: React.FC = () => {
 
             const prompt = `You are an AI SEO assistant specialized in conceptual broken link checking. For the domain "${domain}", provide a summary of potential broken link issues, a list of *conceptual* broken links (e.g., common patterns or types of broken links that might occur on a site like this, not actual crawled URLs), their hypothetical reasons, and a priority level. Also, include recommendations for fixing and preventing them. Remember this is a conceptual analysis based on general SEO knowledge, not real-time crawling.`;
 
-            const jsonString = await runGeminiWithSchema('gemini-2.5-flash', prompt, schema);
+            const jsonString = await runDeepSeekWithSchema('deepseek-chat', prompt, schema);
             const parsedReport: BrokenLinkReport = JSON.parse(jsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
             console.error('AI Broken Link Checker Error:', err);
             const errorMessage = err.message || 'An AI error occurred during broken link analysis.';
-            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
-                setError("API Key not found or invalid. Please select a valid API key.");
-                invalidateApiKey();
+            if (errorMessage.includes("DeepSeek API key is not configured")) {
+                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
             } else {
                 setError(errorMessage);
             }
@@ -75,7 +73,7 @@ const BrokenLinkChecker: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI Broken Link Checker, powered by the Gemini API, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
+                Our AI Broken Link Checker, powered by the DeepSeek API, offers a conceptual analysis of potential broken links on any domain. This tool utilizes advanced AI to synthesize general web best practices and SEO knowledge, providing insights into common causes and types of broken links that might affect a website. It's an excellent resource for understanding potential crawlability issues and user experience problems related to outdated or missing content without performing actual website crawls.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes a summary of potential issues, a list of *hypothetical* broken links with reasons and priority levels, and actionable recommendations for prevention and repair. This helps website administrators and SEO specialists to be proactive in maintaining site health.
@@ -124,7 +122,7 @@ const BrokenLinkChecker: React.FC = () => {
 
                 <button
                     onClick={runAnalysis}
-                    disabled={isLoading || !domain.trim() || isApiKeyLoading || !apiKeySelected}
+                    disabled={isLoading || !domain.trim() || !hasDeepSeekKey}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Analyzing links..." /> : 'Analyze Broken Links with AI'}

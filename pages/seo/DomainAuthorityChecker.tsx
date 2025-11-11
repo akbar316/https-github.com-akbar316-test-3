@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/geminiApi';
+import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
-import { useApiKey } from '../../context/ApiKeyContext';
 
 interface DomainAuthorityReport {
     domain: string;
@@ -19,7 +18,7 @@ const DomainAuthorityChecker: React.FC = () => {
     const [report, setReport] = useState<DomainAuthorityReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
+    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
 
     const runAnalysis = async () => {
         if (!domain.trim()) {
@@ -47,16 +46,15 @@ const DomainAuthorityChecker: React.FC = () => {
             
             const prompt = `You are an AI SEO assistant specialized in conceptual domain authority analysis. For the domain "${domain}", provide a conceptual Domain Authority (DA) and Page Authority (PA) rating (use qualitative descriptions or score ranges), an overall conceptual rating (e.g., "Strong", "Moderate", "Weak"), key factors that conceptually influence this authority, and recommendations for improvement. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data from specific SEO tools.`;
 
-            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
+            const jsonString = await runDeepSeekWithSchema('deepseek-chat', prompt, schema);
             const parsedReport: DomainAuthorityReport = JSON.parse(jsonString);
             setReport(parsedReport);
 
         } catch (err: any) {
             console.error('AI Domain Authority Checker Error:', err);
             const errorMessage = err.message || 'An AI error occurred during domain authority analysis.';
-            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
-                setError("API Key not found or invalid. Please select a valid API key.");
-                invalidateApiKey();
+            if (errorMessage.includes("DeepSeek API key is not configured")) {
+                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
             } else {
                 setError(errorMessage);
             }
@@ -68,7 +66,7 @@ const DomainAuthorityChecker: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI Domain Authority Checker, powered by the Gemini API, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
+                Our AI Domain Authority Checker, powered by the DeepSeek API, provides a conceptual analysis of a domain's authority and page authority. This tool utilizes advanced AI to synthesize general SEO principles and offer insights into what conceptually drives a website's authority in search engine rankings. It's an excellent resource for getting an AI-driven overview of a website's perceived strength and credibility without requiring real-time data from specific SEO metrics providers.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report that includes conceptual DA/PA ratings, an overall conceptual strength rating, key factors influencing this authority, and actionable recommendations for improvement. This helps SEO professionals and website owners to understand and strategize around improving their domain's standing.
@@ -89,7 +87,7 @@ const DomainAuthorityChecker: React.FC = () => {
     return (
         <ToolPageLayout
             title="AI Domain Authority Checker"
-            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via Gemini)."
+            description="Get an AI-powered analysis of a domain's authority (conceptual analysis via DeepSeek)."
             longDescription={longDescription}
         >
             <div className="max-w-2xl mx-auto space-y-6">
@@ -109,7 +107,7 @@ const DomainAuthorityChecker: React.FC = () => {
 
                 <button
                     onClick={runAnalysis}
-                    disabled={isLoading || !domain.trim() || isApiKeyLoading || !apiKeySelected}
+                    disabled={isLoading || !domain.trim() || !hasDeepSeekKey}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Analyzing authority..." /> : 'Analyze Domain Authority with AI'}

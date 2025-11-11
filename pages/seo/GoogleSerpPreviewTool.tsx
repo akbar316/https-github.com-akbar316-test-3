@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/geminiApi';
+import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
-import { useApiKey } from '../../context/ApiKeyContext';
 
 interface SerpOptimization {
     title: string;
@@ -29,7 +28,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     const [optimization, setOptimization] = useState<SerpOptimization | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
+    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
 
     const generateRecommendations = async () => {
         if (!title.trim() || !description.trim() || !focusKeyword.trim()) {
@@ -62,16 +61,15 @@ const GoogleSerpPreviewTool: React.FC = () => {
             URL: "${url}"
             Focus Keyword: "${focusKeyword}"`;
             
-            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
+            const jsonString = await runDeepSeekWithSchema('deepseek-chat', prompt, schema);
             const parsedOptimization: SerpOptimization = JSON.parse(jsonString);
             setOptimization(parsedOptimization);
 
         } catch (err: any) {
             console.error('AI SERP Optimization Error:', err);
             const errorMessage = err.message || 'An AI error occurred during SERP optimization.';
-            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
-                setError("API Key not found or invalid. Please select a valid API key.");
-                invalidateApiKey();
+            if (errorMessage.includes("DeepSeek API key is not configured")) {
+                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
             } else {
                 setError(errorMessage);
             }
@@ -83,7 +81,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI Google SERP Preview & Optimizer, powered by the Gemini API, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
+                Our AI Google SERP Preview & Optimizer, powered by the DeepSeek API, helps you craft compelling search engine result page (SERP) snippets. This tool allows you to visualize how your website's title, description, and URL will appear in Google search results, providing a real-time preview. Beyond just visualization, it leverages advanced AI to analyze your snippet against a focus keyword and generate actionable recommendations for improvement. This helps you optimize for higher click-through rates (CTR) and better visibility.
             </p>
             <p>
                 Input your current meta title, description, and target keyword, and the AI will suggest enhancements, ensuring your snippet is enticing and relevant to searchers. This is an indispensable tool for SEO specialists, content marketers, and webmasters aiming to stand out in competitive search results.
@@ -100,7 +98,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
     return (
         <ToolPageLayout
             title="AI Google SERP Preview & Optimizer"
-            description="Preview your SERP snippet and get AI-powered recommendations to improve it via Gemini."
+            description="Preview your SERP snippet and get AI-powered recommendations to improve it via DeepSeek."
             longDescription={longDescription}
         >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -129,7 +127,7 @@ const GoogleSerpPreviewTool: React.FC = () => {
                     </div>
                     <button
                         onClick={generateRecommendations}
-                        disabled={isLoading || !title.trim() || !description.trim() || !focusKeyword.trim() || isApiKeyLoading || !apiKeySelected}
+                        disabled={isLoading || !title.trim() || !description.trim() || !focusKeyword.trim() || !hasDeepSeekKey}
                         className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                     >
                         {isLoading ? <AiLoadingSpinner message="Optimizing snippet..." /> : 'Get AI Recommendations'}

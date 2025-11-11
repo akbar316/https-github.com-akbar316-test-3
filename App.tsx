@@ -9,6 +9,7 @@ import { isWebGLAvailable } from './utils/webgl';
 import useIsDesktop from './hooks/useIsDesktop';
 import { ApiKeyProvider } from './context/ApiKeyContext';
 import ApiKeyGate from './components/ApiKeyGate';
+import DeepSeekApiKeyGate from './components/DeepSeekApiKeyGate';
 
 // Lazy load the heavy 3D background
 const ThreeBackground = React.lazy(() => import('./components/ThreeBackground'));
@@ -46,13 +47,6 @@ const ScrollToAnchor: React.FC = () => {
 
   return null;
 };
-
-const aiToolPaths = new Set([
-  '/text-to-image-generator', '/ai-image-editor', '/ai-hairstyle-try-on',
-  '/pdf-to-word', '/pdf-to-excel', '/pdf-to-powerpoint', '/pdf-to-html', '/pdf-ocr', '/pdf-bookmark-adder',
-  '/keyword-research-tool', '/backlink-checker', '/website-analyzer', '/broken-link-checker',
-  '/domain-authority-checker', '/google-serp-preview'
-]);
 
 
 const App: React.FC = () => {
@@ -124,20 +118,21 @@ const App: React.FC = () => {
                 <Route path="/" element={<HomePage />} />
                 {tools.map((tool) => {
                   const ToolComponent = tool.component;
-                  const isAiTool = aiToolPaths.has(tool.path);
+                  const provider = tool.apiProvider;
+                  
+                  let element = <ToolComponent />;
+
+                  if (provider === 'gemini' || provider === 'google-psi') {
+                    element = <ApiKeyGate>{element}</ApiKeyGate>;
+                  } else if (provider === 'deepseek') {
+                    element = <DeepSeekApiKeyGate>{element}</DeepSeekApiKeyGate>;
+                  }
+
                   return (
                     <Route
                       key={tool.path}
                       path={tool.path}
-                      element={
-                        isAiTool ? (
-                          <ApiKeyGate>
-                            <ToolComponent />
-                          </ApiKeyGate>
-                        ) : (
-                          <ToolComponent />
-                        )
-                      }
+                      element={element}
                     />
                   );
                 })}

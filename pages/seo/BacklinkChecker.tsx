@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPageLayout, CopyButton } from '../../components/ToolPageLayout';
-import { runGeminiWithSchema } from '../../utils/geminiApi';
+import { runDeepSeekWithSchema } from '../../utils/deepseekApi';
 import AiLoadingSpinner from '../../components/AiLoadingSpinner';
 import { Type } from '@google/genai';
-import { useApiKey } from '../../context/ApiKeyContext';
 
 interface BacklinkAnalysis {
     domain: string;
@@ -23,7 +22,7 @@ const BacklinkChecker: React.FC = () => {
     const [analysis, setAnalysis] = useState<BacklinkAnalysis | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const { invalidateApiKey, apiKeySelected, isLoading: isApiKeyLoading } = useApiKey();
+    const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
 
     const runAnalysis = async () => {
         if (!domain.trim()) {
@@ -59,16 +58,15 @@ const BacklinkChecker: React.FC = () => {
 
             const prompt = `You are an expert SEO backlink analysis assistant. Provide a conceptual analysis of the backlink profile for the domain "${domain}". Include an overview, conceptual quality metrics (total backlinks, referring domains, domain authority, spam score - use estimated ranges or qualitative descriptions), potential opportunities for improvement, and any conceptual risks. Remember this is a conceptual analysis based on general SEO knowledge, not real-time data.`;
             
-            const jsonString = await runGeminiWithSchema('gemini-flash-lite-latest', prompt, schema);
+            const jsonString = await runDeepSeekWithSchema('deepseek-chat', prompt, schema);
             const parsedAnalysis: BacklinkAnalysis = JSON.parse(jsonString);
             setAnalysis(parsedAnalysis);
 
         } catch (err: any) {
             console.error('AI Backlink Analysis Error:', err);
             const errorMessage = err.message || 'An AI error occurred during backlink analysis.';
-            if (errorMessage.includes("Requested entity was not found.") || errorMessage.includes("API Key")) {
-                setError("API Key not found or invalid. Please select a valid API key.");
-                invalidateApiKey();
+            if (errorMessage.includes("DeepSeek API key is not configured")) {
+                setError("DeepSeek API key not found. Please set the DEEPSEEK_API_KEY environment variable.");
             } else {
                 setError(errorMessage);
             }
@@ -80,7 +78,7 @@ const BacklinkChecker: React.FC = () => {
     const longDescription = (
         <>
             <p>
-                Our AI Backlink Checker, powered by the Gemini API, provides a conceptual analysis of any domain's backlink profile. This tool uses advanced AI to synthesize general SEO knowledge and provide insights into potential backlink quality, quantity, and associated risks and opportunities. It's an excellent resource for getting an AI-driven overview of a website's authority and link-building landscape without requiring real-time data.
+                Our AI Backlink Checker, powered by the DeepSeek API, provides a conceptual analysis of any domain's backlink profile. This tool uses advanced AI to synthesize general SEO knowledge and provide insights into potential backlink quality, quantity, and associated risks and opportunities. It's an excellent resource for getting an AI-driven overview of a website's authority and link-building landscape without requiring real-time data.
             </p>
             <p>
                 Input a domain, and the AI will generate a structured report with qualitative metrics and actionable suggestions for improving or maintaining a healthy backlink profile. This helps SEO professionals and digital marketers to formulate strategies more effectively.
@@ -121,7 +119,7 @@ const BacklinkChecker: React.FC = () => {
 
                 <button
                     onClick={runAnalysis}
-                    disabled={isLoading || !domain.trim() || isApiKeyLoading || !apiKeySelected}
+                    disabled={isLoading || !domain.trim() || !hasDeepSeekKey}
                     className="w-full bg-brand-primary text-white py-3 rounded-md hover:bg-brand-primary-hover font-semibold text-lg disabled:bg-gray-500"
                 >
                     {isLoading ? <AiLoadingSpinner message="Analyzing backlinks..." /> : 'Analyze Backlinks with AI'}
